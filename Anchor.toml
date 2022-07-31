@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-serum_gov = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+serum_gov = "G8aGmsybmGqQisBuRrDqiGfdz8YcCJcU3agWDFmTkf8S"
 
 [registry]
 url = "https://api.apr.dev"
