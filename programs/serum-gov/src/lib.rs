@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, Transfer};
 
 declare_id!("G8aGmsybmGqQisBuRrDqiGfdz8YcCJcU3agWDFmTkf8S");
 
@@ -44,9 +44,10 @@ pub mod serum_gov {
         locker.bump = *ctx.bumps.get("locker").unwrap();
         locker.created_at = ctx.accounts.clock.unix_timestamp;
         locker.amount = amount;
-        locker.collect_delay = collect_delay;
+        locker.claim_delay = collect_delay;
         locker.redeem_delay = redeem_delay;
         locker.redeemable_at = None;
+        locker.is_claimed = false;
 
         user_account.locker_index += 1;
 
@@ -70,13 +71,96 @@ pub mod serum_gov {
         locker.bump = *ctx.bumps.get("locker").unwrap();
         locker.created_at = ctx.accounts.clock.unix_timestamp;
         locker.amount = amount;
-        locker.collect_delay = collect_delay;
+        locker.claim_delay = collect_delay;
         locker.redeem_delay = redeem_delay;
         locker.redeemable_at = None;
+        locker.is_claimed = false;
 
         user_account.locker_index += 1;
 
         Ok(())
+    }
+
+    pub fn claim(ctx: Context<Claim>, _locker_index: u64) -> Result<()> {
+        let locker = &mut ctx.accounts.locker;
+
+        locker.is_claimed = true;
+
+        let mint_amount = if locker.is_msrm {
+            locker
+                .amount
+                .checked_mul(1_000_000)
+                .unwrap()
+                .checked_mul(1_000_000)
+                .unwrap()
+        } else {
+            locker.amount
+        };
+
+        token::mint_to(
+            ctx.accounts
+                .mint_gsrm()
+                .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
+            mint_amount,
+        )?;
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(locker_index: u64)]
+pub struct Claim<'info> {
+    // #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"locker", &owner.key().to_bytes()[..], locker_index.to_string().as_bytes()],
+        bump,
+        constraint = locker.is_claimed == false @ SerumGovError::LockerAlreadyClaimed,
+        constraint = (locker.created_at + locker.claim_delay) <= clock.unix_timestamp @ SerumGovError::LockerNotClaimable,
+    )]
+    pub locker: Account<'info, Locker>,
+
+    /// CHECK: Just a PDA for vault authorities.
+    #[account(
+        seeds = [b"authority"],
+        bump,
+    )]
+    pub authority: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"gSRM"],
+        bump,
+        mint::decimals = 6,
+        mint::authority = authority,
+    )]
+    pub gsrm_mint: Account<'info, Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint = gsrm_mint,
+        associated_token::authority = owner
+    )]
+    pub owner_gsrm_account: Account<'info, TokenAccount>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> Claim<'info> {
+    fn mint_gsrm(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: self.gsrm_mint.to_account_info().clone(),
+            to: self.owner_gsrm_account.to_account_info().clone(),
+            authority: self.authority.to_account_info().clone(),
+        };
+        let cpi_program = self.token_program.to_account_info();
+
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -240,13 +324,14 @@ pub struct Init<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
+    /// NOTE: Decimals have been kept same as SRM.
     #[account(
         init,
         payer = payer,
         seeds = [b"gSRM"],
         bump,
-        mint::decimals = 9,
-        mint::authority = payer,
+        mint::decimals = 6,
+        mint::authority = authority,
     )]
     pub gsrm_mint: Account<'info, Mint>,
 
@@ -303,7 +388,17 @@ pub struct Locker {
     pub bump: u8,
     pub created_at: i64,
     pub amount: u64,
-    pub collect_delay: i64,
+    pub claim_delay: i64,
     pub redeem_delay: i64,
+    pub is_claimed: bool,
     pub redeemable_at: Option<i64>,
+}
+
+#[error_code]
+pub enum SerumGovError {
+    #[msg("Locker has already been claimed.")]
+    LockerAlreadyClaimed,
+
+    #[msg("Locker is not currently claimable.")]
+    LockerNotClaimable,
 }

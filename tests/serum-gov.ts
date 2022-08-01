@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
+import { AnchorError, Program } from "@project-serum/anchor";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -39,12 +39,13 @@ describe("serum-gov", () => {
 
   let aliceSRMAccount: PublicKey;
   let aliceMSRMAccount: PublicKey;
+  let aliceGSRMAccount: PublicKey;
 
-  const [authority] = findProgramAddressSync(
+  const [authority, authorityBump] = findProgramAddressSync(
     [Buffer.from("authority")],
     program.programId
   );
-  const [gsrmMint] = findProgramAddressSync(
+  const [GSRM_MINT] = findProgramAddressSync(
     [Buffer.from("gSRM")],
     program.programId
   );
@@ -134,13 +135,13 @@ describe("serum-gov", () => {
     );
   });
 
-  it("can init!", async () => {
+  it("can init", async () => {
     const tx = await program.methods
       .init()
       .accounts({
         payer: sbf.publicKey,
         authority,
-        gsrmMint,
+        gsrmMint: GSRM_MINT,
         srmMint: SRM_MINT,
         srmVault,
         msrmMint: MSRM_MINT,
@@ -152,9 +153,9 @@ describe("serum-gov", () => {
       .signers([sbf])
       .rpc();
 
-    const mint = await getMint(connection, gsrmMint);
-    expect(mint.decimals).to.equal(9);
-    expect(mint.mintAuthority.toBase58()).to.equal(sbf.publicKey.toBase58());
+    const mint = await getMint(connection, GSRM_MINT);
+    expect(mint.decimals).to.equal(6);
+    expect(mint.mintAuthority.toBase58()).to.equal(authority.toBase58());
 
     const vaultSrm = await connection.getTokenAccountBalance(srmVault);
     expect(vaultSrm.value.uiAmount).to.equal(0);
@@ -163,14 +164,14 @@ describe("serum-gov", () => {
     expect(vaultMsrm.value.uiAmount).to.equal(0);
   });
 
-  it("cant init vaults again!", async () => {
+  it("cant init vaults twice", async () => {
     try {
       await program.methods
         .init()
         .accounts({
           payer: sbf.publicKey,
           authority,
-          gsrmMint,
+          gsrmMint: GSRM_MINT,
           srmMint: SRM_MINT,
           srmVault,
           msrmMint: MSRM_MINT,
@@ -180,7 +181,7 @@ describe("serum-gov", () => {
           systemProgram: SystemProgram.programId,
         })
         .signers([sbf])
-        .rpc();
+        .rpc({ skipPreflight: true });
       assert(false);
     } catch (e) {
       assert(true);
@@ -239,7 +240,7 @@ describe("serum-gov", () => {
     expect(aliceLocker.lockerIndex.toNumber()).to.equal(0);
     expect(aliceLocker.amount.toNumber()).to.equal(100_000_000);
     expect(aliceLocker.isMsrm).to.equal(false);
-    expect(aliceLocker.collectDelay.toNumber()).to.equal(0);
+    expect(aliceLocker.claimDelay.toNumber()).to.equal(0);
     expect(aliceLocker.redeemDelay.toNumber()).to.equal(1_000);
 
     expect(srmVaultBalance.value.uiAmount).to.equal(100);
@@ -274,7 +275,6 @@ describe("serum-gov", () => {
       .rpc({ skipPreflight: true });
 
     const aliceMSRMLocker = await program.account.locker.fetch(msrmLocker);
-    console.log(aliceMSRMLocker);
     const msrmVaultBalance = await connection.getTokenAccountBalance(msrmVault);
 
     expect(aliceMSRMLocker.owner.toBase58()).to.equal(
@@ -283,9 +283,107 @@ describe("serum-gov", () => {
     expect(aliceMSRMLocker.lockerIndex.toNumber()).to.equal(1);
     expect(aliceMSRMLocker.amount.toNumber()).to.equal(1);
     expect(aliceMSRMLocker.isMsrm).to.equal(true);
-    expect(aliceMSRMLocker.collectDelay.toNumber()).to.equal(0);
+    expect(aliceMSRMLocker.claimDelay.toNumber()).to.equal(0);
     expect(aliceMSRMLocker.redeemDelay.toNumber()).to.equal(1_000);
 
     expect(msrmVaultBalance.value.uiAmount).to.equal(1);
   });
+
+  it("can claim for srm locker", async () => {
+    // const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    aliceGSRMAccount = await createAssociatedTokenAccount(
+      connection,
+      alice,
+      GSRM_MINT,
+      alice.publicKey
+    );
+
+    const [aliceSrmLocker] = findProgramAddressSync(
+      [Buffer.from("locker"), alice.publicKey.toBuffer(), Buffer.from("0")],
+      program.programId
+    );
+
+    await program.methods
+      .claim(new BN(0))
+      .accounts({
+        owner: alice.publicKey,
+        locker: aliceSrmLocker,
+        authority,
+        gsrmMint: GSRM_MINT,
+        ownerGsrmAccount: aliceGSRMAccount,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
+
+    const aliceGsrmBalance = await connection.getTokenAccountBalance(
+      aliceGSRMAccount
+    );
+
+    expect(aliceGsrmBalance.value.uiAmount).to.equal(100);
+  });
+
+  it("can claim for msrm locker", async () => {
+    const [aliceMsrmLocker] = findProgramAddressSync(
+      [Buffer.from("locker"), alice.publicKey.toBuffer(), Buffer.from("1")],
+      program.programId
+    );
+
+    await program.methods
+      .claim(new BN(1))
+      .accounts({
+        owner: alice.publicKey,
+        locker: aliceMsrmLocker,
+        authority,
+        gsrmMint: GSRM_MINT,
+        ownerGsrmAccount: aliceGSRMAccount,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
+
+    const aliceGsrmBalance = await connection.getTokenAccountBalance(
+      aliceGSRMAccount
+    );
+
+    expect(aliceGsrmBalance.value.uiAmount).to.equal(100 + 1_000_000);
+  });
+
+  it("cant claim locker twice", async () => {
+    const [aliceSrmLocker] = findProgramAddressSync(
+      [Buffer.from("locker"), alice.publicKey.toBuffer(), Buffer.from("0")],
+      program.programId
+    );
+
+    try {
+      await program.methods
+        .claim(new BN(0))
+        .accounts({
+          owner: alice.publicKey,
+          locker: aliceSrmLocker,
+          authority,
+          gsrmMint: GSRM_MINT,
+          ownerGsrmAccount: aliceGSRMAccount,
+          clock: SYSVAR_CLOCK_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([alice])
+        .rpc();
+      assert(false);
+    } catch (e) {
+      if (e instanceof AnchorError) {
+        assert(true, e.error.errorMessage);
+      } else {
+        console.error(e);
+        assert(false);
+      }
+    }
+  });
+
+  // TODO: Add test for early claim
 });
