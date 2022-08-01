@@ -11,6 +11,7 @@ import {
 import {
   createAssociatedTokenAccount,
   createMint,
+  getMint,
   mintTo,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -30,17 +31,28 @@ describe("serum-gov", () => {
   let SRM_MINT: PublicKey;
   let MSRM_MINT: PublicKey;
 
+  let srmVault: PublicKey;
+  let msrmVault: PublicKey;
+
   const sbf = Keypair.generate();
   const alice = Keypair.generate();
 
   let aliceSRMAccount: PublicKey;
   let aliceMSRMAccount: PublicKey;
 
-  let vaultAuthority: PublicKey;
-  let srmVault: PublicKey;
-  let msrmVault: PublicKey;
+  const [authority] = findProgramAddressSync(
+    [Buffer.from("authority")],
+    program.programId
+  );
+  const [gsrmMint] = findProgramAddressSync(
+    [Buffer.from("gSRM")],
+    program.programId
+  );
 
-  let aliceUserAccount: PublicKey;
+  const [aliceUserAccount] = findProgramAddressSync(
+    [Buffer.from("user"), alice.publicKey.toBuffer()],
+    program.programId
+  );
 
   before(async () => {
     // Airdrop sbf
@@ -112,10 +124,6 @@ describe("serum-gov", () => {
     // Mint MSRM to alice
     await mintTo(connection, sbf, MSRM_MINT, aliceMSRMAccount, sbf, 2);
 
-    [vaultAuthority] = findProgramAddressSync(
-      [Buffer.from("authority")],
-      program.programId
-    );
     [srmVault] = findProgramAddressSync(
       [Buffer.from("vault"), SRM_MINT.toBuffer()],
       program.programId
@@ -124,18 +132,15 @@ describe("serum-gov", () => {
       [Buffer.from("vault"), MSRM_MINT.toBuffer()],
       program.programId
     );
-    [aliceUserAccount] = findProgramAddressSync(
-      [Buffer.from("user"), alice.publicKey.toBuffer()],
-      program.programId
-    );
   });
 
-  it("can init vaults!", async () => {
+  it("can init!", async () => {
     const tx = await program.methods
-      .initVaults()
+      .init()
       .accounts({
         payer: sbf.publicKey,
-        vaultAuthority,
+        authority,
+        gsrmMint,
         srmMint: SRM_MINT,
         srmVault,
         msrmMint: MSRM_MINT,
@@ -146,16 +151,26 @@ describe("serum-gov", () => {
       })
       .signers([sbf])
       .rpc();
-    console.log("Your transaction signature", tx);
+
+    const mint = await getMint(connection, gsrmMint);
+    expect(mint.decimals).to.equal(9);
+    expect(mint.mintAuthority.toBase58()).to.equal(sbf.publicKey.toBase58());
+
+    const vaultSrm = await connection.getTokenAccountBalance(srmVault);
+    expect(vaultSrm.value.uiAmount).to.equal(0);
+
+    const vaultMsrm = await connection.getTokenAccountBalance(msrmVault);
+    expect(vaultMsrm.value.uiAmount).to.equal(0);
   });
 
   it("cant init vaults again!", async () => {
     try {
       await program.methods
-        .initVaults()
+        .init()
         .accounts({
           payer: sbf.publicKey,
-          vaultAuthority,
+          authority,
+          gsrmMint,
           srmMint: SRM_MINT,
           srmVault,
           msrmMint: MSRM_MINT,
@@ -207,7 +222,7 @@ describe("serum-gov", () => {
         userAccount: aliceUserAccount,
         srmMint: SRM_MINT,
         ownerSrmAccount: aliceSRMAccount,
-        vaultAuthority,
+        authority,
         srmVault,
         locker,
         clock: SYSVAR_CLOCK_PUBKEY,
@@ -247,7 +262,7 @@ describe("serum-gov", () => {
         userAccount: aliceUserAccount,
         msrmMint: MSRM_MINT,
         ownerMsrmAccount: aliceMSRMAccount,
-        vaultAuthority,
+        authority,
         msrmVault,
         locker: msrmLocker,
         clock: SYSVAR_CLOCK_PUBKEY,

@@ -13,7 +13,7 @@ pub mod serum_gov {
 
     use super::*;
 
-    pub fn init_vaults(_ctx: Context<InitVaults>) -> Result<()> {
+    pub fn init(_ctx: Context<Init>) -> Result<()> {
         Ok(())
     }
 
@@ -104,12 +104,12 @@ pub struct DepositMSRM<'info> {
         seeds = [b"authority"],
         bump,
     )]
-    pub vault_authority: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
 
     #[account(
         mut,
         token::mint = msrm_mint,
-        token::authority = vault_authority,
+        token::authority = authority,
     )]
     pub msrm_vault: Account<'info, TokenAccount>,
 
@@ -169,12 +169,12 @@ pub struct DepositSRM<'info> {
         seeds = [b"authority"],
         bump,
     )]
-    pub vault_authority: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
 
     #[account(
         mut,
         token::mint = srm_mint,
-        token::authority = vault_authority,
+        token::authority = authority,
     )]
     pub srm_vault: Account<'info, TokenAccount>,
 
@@ -222,7 +222,7 @@ pub struct InitUser<'info> {
 }
 
 #[derive(Accounts)]
-pub struct InitVaults<'info> {
+pub struct Init<'info> {
     /// NOTE: Could add constraint to restrict authorized payer, but this ix can't be called twice anyway.
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -232,7 +232,17 @@ pub struct InitVaults<'info> {
         seeds = [b"authority"],
         bump,
     )]
-    pub vault_authority: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [b"gSRM"],
+        bump,
+        mint::decimals = 9,
+        mint::authority = payer,
+    )]
+    pub gsrm_mint: Account<'info, Mint>,
 
     #[cfg_attr(
         not(feature = "test"),
@@ -246,7 +256,7 @@ pub struct InitVaults<'info> {
         bump,
         payer = payer,
         token::mint = srm_mint,
-        token::authority = vault_authority,
+        token::authority = authority,
     )]
     pub srm_vault: Account<'info, TokenAccount>,
 
@@ -262,7 +272,7 @@ pub struct InitVaults<'info> {
         bump,
         payer = payer,
         token::mint = msrm_mint,
-        token::authority = vault_authority,
+        token::authority = authority,
     )]
     pub msrm_vault: Account<'info, TokenAccount>,
 
