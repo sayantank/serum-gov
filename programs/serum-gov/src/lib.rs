@@ -35,16 +35,19 @@ pub mod serum_gov {
     ) -> Result<()> {
         token::transfer(ctx.accounts.into_deposit_srm_context(), amount)?;
 
+        let user_account = &mut ctx.accounts.user_account;
+
         let locker = &mut ctx.accounts.locker;
         locker.owner = ctx.accounts.owner.key();
         locker.is_msrm = false;
+        locker.locker_index = user_account.locker_index;
         locker.bump = *ctx.bumps.get("locker").unwrap();
         locker.created_at = ctx.accounts.clock.unix_timestamp;
         locker.amount = amount;
         locker.collect_delay = collect_delay;
         locker.redeem_delay = redeem_delay;
+        locker.redeemable_at = None;
 
-        let user_account = &mut ctx.accounts.user_account;
         user_account.locker_index += 1;
 
         Ok(())
@@ -58,16 +61,19 @@ pub mod serum_gov {
     ) -> Result<()> {
         token::transfer(ctx.accounts.into_deposit_msrm_context(), amount)?;
 
+        let user_account = &mut ctx.accounts.user_account;
+
         let locker = &mut ctx.accounts.locker;
         locker.owner = ctx.accounts.owner.key();
         locker.is_msrm = true;
+        locker.locker_index = user_account.locker_index;
         locker.bump = *ctx.bumps.get("locker").unwrap();
         locker.created_at = ctx.accounts.clock.unix_timestamp;
         locker.amount = amount;
         locker.collect_delay = collect_delay;
         locker.redeem_delay = redeem_delay;
+        locker.redeemable_at = None;
 
-        let user_account = &mut ctx.accounts.user_account;
         user_account.locker_index += 1;
 
         Ok(())
@@ -293,9 +299,11 @@ pub struct User {
 pub struct Locker {
     pub owner: Pubkey,
     pub is_msrm: bool,
+    pub locker_index: u64,
     pub bump: u8,
     pub created_at: i64,
     pub amount: u64,
     pub collect_delay: i64,
     pub redeem_delay: i64,
+    pub redeemable_at: Option<i64>,
 }

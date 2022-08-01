@@ -236,6 +236,7 @@ describe("serum-gov", () => {
     const srmVaultBalance = await connection.getTokenAccountBalance(srmVault);
 
     expect(aliceLocker.owner.toBase58()).to.equal(alice.publicKey.toBase58());
+    expect(aliceLocker.lockerIndex.toNumber()).to.equal(0);
     expect(aliceLocker.amount.toNumber()).to.equal(100_000_000);
     expect(aliceLocker.isMsrm).to.equal(false);
     expect(aliceLocker.collectDelay.toNumber()).to.equal(0);
@@ -273,11 +274,13 @@ describe("serum-gov", () => {
       .rpc({ skipPreflight: true });
 
     const aliceMSRMLocker = await program.account.locker.fetch(msrmLocker);
+    console.log(aliceMSRMLocker);
     const msrmVaultBalance = await connection.getTokenAccountBalance(msrmVault);
 
     expect(aliceMSRMLocker.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
     );
+    expect(aliceMSRMLocker.lockerIndex.toNumber()).to.equal(1);
     expect(aliceMSRMLocker.amount.toNumber()).to.equal(1);
     expect(aliceMSRMLocker.isMsrm).to.equal(true);
     expect(aliceMSRMLocker.collectDelay.toNumber()).to.equal(0);
