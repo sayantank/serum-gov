@@ -3,9 +3,12 @@ use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, Transfer};
 
 declare_id!("G8aGmsybmGqQisBuRrDqiGfdz8YcCJcU3agWDFmTkf8S");
 
-pub mod utils;
+pub mod config;
 
-pub use utils::mints::{MSRM, SRM};
+pub use config::{
+    authority::UPGRADE_AUTHORITY,
+    mints::{MSRM, SRM},
+};
 
 #[program]
 pub mod serum_gov {
@@ -13,7 +16,25 @@ pub mod serum_gov {
 
     use super::*;
 
-    pub fn init(_ctx: Context<Init>) -> Result<()> {
+    pub fn init(ctx: Context<Init>, claim_delay: i64, redeem_delay: i64) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+
+        config.claim_delay = claim_delay;
+        config.redeem_delay = redeem_delay;
+
+        Ok(())
+    }
+
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
+        claim_delay: i64,
+        redeem_delay: i64,
+    ) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+
+        config.claim_delay = claim_delay;
+        config.redeem_delay = redeem_delay;
+
         Ok(())
     }
 
@@ -22,79 +43,62 @@ pub mod serum_gov {
 
         user.owner = ctx.accounts.owner.key();
         user.bump = *ctx.bumps.get("user_account").unwrap();
-        user.locker_index = 0;
+        user.claim_index = 0;
+        user.redeem_index = 0;
 
         Ok(())
     }
 
-    pub fn deposit_srm(
-        ctx: Context<DepositSRM>,
-        amount: u64,
-        collect_delay: i64,
-        redeem_delay: i64,
-    ) -> Result<()> {
+    pub fn deposit_srm(ctx: Context<DepositSRM>, amount: u64) -> Result<()> {
         token::transfer(ctx.accounts.into_deposit_srm_context(), amount)?;
 
         let user_account = &mut ctx.accounts.user_account;
 
-        let locker = &mut ctx.accounts.locker;
-        locker.owner = ctx.accounts.owner.key();
-        locker.is_msrm = false;
-        locker.locker_index = user_account.locker_index;
-        locker.bump = *ctx.bumps.get("locker").unwrap();
-        locker.created_at = ctx.accounts.clock.unix_timestamp;
-        locker.amount = amount;
-        locker.claim_delay = collect_delay;
-        locker.redeem_delay = redeem_delay;
-        locker.redeemable_at = None;
-        locker.is_claimed = false;
+        let ticket = &mut ctx.accounts.claim_ticket;
+        ticket.owner = ctx.accounts.owner.key();
+        ticket.is_msrm = false;
+        ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
+        ticket.created_at = ctx.accounts.clock.unix_timestamp;
+        ticket.claim_delay = ctx.accounts.config.claim_delay;
+        ticket.amount = amount;
+        ticket.claim_index = user_account.claim_index;
 
-        user_account.locker_index += 1;
+        user_account.claim_index += 1;
 
         Ok(())
     }
 
-    pub fn deposit_msrm(
-        ctx: Context<DepositMSRM>,
-        amount: u64,
-        collect_delay: i64,
-        redeem_delay: i64,
-    ) -> Result<()> {
+    pub fn deposit_msrm(ctx: Context<DepositMSRM>, amount: u64) -> Result<()> {
         token::transfer(ctx.accounts.into_deposit_msrm_context(), amount)?;
 
         let user_account = &mut ctx.accounts.user_account;
 
-        let locker = &mut ctx.accounts.locker;
-        locker.owner = ctx.accounts.owner.key();
-        locker.is_msrm = true;
-        locker.locker_index = user_account.locker_index;
-        locker.bump = *ctx.bumps.get("locker").unwrap();
-        locker.created_at = ctx.accounts.clock.unix_timestamp;
-        locker.amount = amount;
-        locker.claim_delay = collect_delay;
-        locker.redeem_delay = redeem_delay;
-        locker.redeemable_at = None;
-        locker.is_claimed = false;
+        let ticket = &mut ctx.accounts.claim_ticket;
+        ticket.owner = ctx.accounts.owner.key();
+        ticket.is_msrm = true;
+        ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
+        ticket.created_at = ctx.accounts.clock.unix_timestamp;
+        ticket.claim_delay = ctx.accounts.config.claim_delay;
+        ticket.amount = amount;
+        ticket.claim_index = user_account.claim_index;
 
-        user_account.locker_index += 1;
+        user_account.claim_index += 1;
 
         Ok(())
     }
 
-    pub fn claim(ctx: Context<Claim>, _locker_index: u64) -> Result<()> {
-        let locker = &mut ctx.accounts.locker;
+    pub fn claim(ctx: Context<Claim>, _claim_index: u64) -> Result<()> {
+        let ticket = &mut ctx.accounts.ticket;
 
-        locker.is_claimed = true;
-
-        let mint_amount = if locker.is_msrm {
-            locker
+        let mint_amount = if ticket.is_msrm {
+            ticket
                 .amount
                 .checked_mul(1_000_000)
                 .unwrap()
                 .checked_mul(1_000_000)
                 .unwrap()
         } else {
-            locker.amount
+            ticket.amount
         };
 
         token::mint_to(
@@ -109,19 +113,25 @@ pub mod serum_gov {
 }
 
 #[derive(Accounts)]
-#[instruction(locker_index: u64)]
+#[instruction(claim_index: u64)]
 pub struct Claim<'info> {
-    // #[account(mut)]
+    #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(
-        mut,
-        seeds = [b"locker", &owner.key().to_bytes()[..], locker_index.to_string().as_bytes()],
+        seeds = [b"config"],
         bump,
-        constraint = locker.is_claimed == false @ SerumGovError::LockerAlreadyClaimed,
-        constraint = (locker.created_at + locker.claim_delay) <= clock.unix_timestamp @ SerumGovError::LockerNotClaimable,
     )]
-    pub locker: Account<'info, Locker>,
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [b"claim", &owner.key().to_bytes()[..], claim_index.to_string().as_bytes()],
+        bump,
+        constraint = (ticket.created_at + ticket.claim_delay) <= clock.unix_timestamp @ SerumGovError::TicketNotClaimable,
+        close = owner
+    )]
+    pub ticket: Account<'info, ClaimTicket>,
 
     /// CHECK: Just a PDA for vault authorities.
     #[account(
@@ -197,6 +207,12 @@ pub struct DepositMSRM<'info> {
     pub authority: AccountInfo<'info>,
 
     #[account(
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
         mut,
         token::mint = msrm_mint,
         token::authority = authority,
@@ -206,11 +222,11 @@ pub struct DepositMSRM<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"locker", &owner.key().to_bytes()[..], user_account.locker_index.to_string().as_bytes()],
+        seeds = [b"claim", &owner.key().to_bytes()[..], user_account.claim_index.to_string().as_bytes()],
         bump,
-        space =  8 + std::mem::size_of::<Locker>()
+        space =  8 + std::mem::size_of::<ClaimTicket>()
     )]
-    pub locker: Account<'info, Locker>,
+    pub claim_ticket: Account<'info, ClaimTicket>,
 
     pub clock: Sysvar<'info, Clock>,
     pub token_program: Program<'info, Token>,
@@ -262,6 +278,12 @@ pub struct DepositSRM<'info> {
     pub authority: AccountInfo<'info>,
 
     #[account(
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
         mut,
         token::mint = srm_mint,
         token::authority = authority,
@@ -271,11 +293,11 @@ pub struct DepositSRM<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"locker", &owner.key().to_bytes()[..], user_account.locker_index.to_string().as_bytes()],
+        seeds = [b"claim", &owner.key().to_bytes()[..], user_account.claim_index.to_string().as_bytes()],
         bump,
-        space =  8 + std::mem::size_of::<Locker>()
+        space =  8 + std::mem::size_of::<ClaimTicket>()
     )]
-    pub locker: Account<'info, Locker>,
+    pub claim_ticket: Account<'info, ClaimTicket>,
 
     pub clock: Sysvar<'info, Clock>,
     pub token_program: Program<'info, Token>,
@@ -312,9 +334,29 @@ pub struct InitUser<'info> {
 }
 
 #[derive(Accounts)]
+pub struct UpdateConfig<'info> {
+    #[cfg_attr(
+        not(feature = "test"),
+        account(address = UPGRADE_AUTHORITY),
+    )]
+    pub upgrade_authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, Config>,
+}
+
+#[derive(Accounts)]
 pub struct Init<'info> {
     /// NOTE: Could add constraint to restrict authorized payer, but this ix can't be called twice anyway.
     #[account(mut)]
+    #[cfg_attr(
+        not(feature = "test"),
+        account(address = UPGRADE_AUTHORITY),
+    )]
     pub payer: Signer<'info>,
 
     /// CHECK: Just a PDA for vault authorities.
@@ -323,6 +365,15 @@ pub struct Init<'info> {
         bump,
     )]
     pub authority: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [b"config"],
+        bump,
+        space = 8 + std::mem::size_of::<Config>()
+    )]
+    pub config: Account<'info, Config>,
 
     /// NOTE: Decimals have been kept same as SRM.
     #[account(
@@ -374,31 +425,32 @@ pub struct Init<'info> {
 }
 
 #[account]
-pub struct User {
-    pub owner: Pubkey,
-    pub bump: u8,
-    pub locker_index: u64,
+pub struct Config {
+    pub claim_delay: i64,
+    pub redeem_delay: i64,
 }
 
 #[account]
-pub struct Locker {
+pub struct User {
+    pub owner: Pubkey,
+    pub bump: u8,
+    pub claim_index: u64,
+    pub redeem_index: u64,
+}
+
+#[account]
+pub struct ClaimTicket {
     pub owner: Pubkey,
     pub is_msrm: bool,
-    pub locker_index: u64,
     pub bump: u8,
     pub created_at: i64,
-    pub amount: u64,
     pub claim_delay: i64,
-    pub redeem_delay: i64,
-    pub is_claimed: bool,
-    pub redeemable_at: Option<i64>,
+    pub amount: u64,
+    pub claim_index: u64,
 }
 
 #[error_code]
 pub enum SerumGovError {
-    #[msg("Locker has already been claimed.")]
-    LockerAlreadyClaimed,
-
-    #[msg("Locker is not currently claimable.")]
-    LockerNotClaimable,
+    #[msg("Ticket is not currently claimable.")]
+    TicketNotClaimable,
 }
