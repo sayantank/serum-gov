@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Burn, Mint, MintTo, Token, TokenAccount, Transfer};
 
 declare_id!("G8aGmsybmGqQisBuRrDqiGfdz8YcCJcU3agWDFmTkf8S");
 
@@ -9,6 +9,8 @@ pub use config::{
     authority::UPGRADE_AUTHORITY,
     mints::{MSRM, SRM},
 };
+
+const MSRM_MULTIPLIER: u64 = 1_000_000_000_000;
 
 #[program]
 pub mod serum_gov {
@@ -91,12 +93,7 @@ pub mod serum_gov {
         let ticket = &mut ctx.accounts.ticket;
 
         let mint_amount = if ticket.is_msrm {
-            ticket
-                .amount
-                .checked_mul(1_000_000)
-                .unwrap()
-                .checked_mul(1_000_000)
-                .unwrap()
+            ticket.amount.checked_mul(MSRM_MULTIPLIER).unwrap()
         } else {
             ticket.amount
         };
@@ -109,6 +106,107 @@ pub mod serum_gov {
         )?;
 
         Ok(())
+    }
+
+    pub fn burn_gsrm(ctx: Context<BurnGSRM>, amount: u64, is_msrm: bool) -> Result<()> {
+        if is_msrm && (amount % MSRM_MULTIPLIER != 0) {
+            return err!(SerumGovError::InvalidMSRMAmount);
+        }
+
+        token::burn(
+            ctx.accounts
+                .into_burn_gsrm_context()
+                .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
+            amount,
+        )?;
+
+        let redeem_amount = if is_msrm {
+            amount / MSRM_MULTIPLIER
+        } else {
+            amount
+        };
+
+        let user_account = &mut ctx.accounts.user_account;
+
+        let ticket = &mut ctx.accounts.redeem_ticket;
+        ticket.owner = ctx.accounts.owner.key();
+        ticket.is_msrm = is_msrm;
+        ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
+        ticket.created_at = ctx.accounts.clock.unix_timestamp;
+        ticket.redeem_delay = ctx.accounts.config.redeem_delay;
+        ticket.amount = redeem_amount;
+        ticket.redeem_index = user_account.redeem_index;
+
+        user_account.redeem_index += 1;
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct BurnGSRM<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"user", &owner.key().to_bytes()[..]],
+        bump,
+    )]
+    pub user_account: Account<'info, User>,
+
+    /// CHECK: Just a PDA for vault authorities.
+    #[account(
+        seeds = [b"authority"],
+        bump,
+    )]
+    pub authority: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [b"gSRM"],
+        bump,
+        mint::decimals = 6,
+        mint::authority = authority,
+    )]
+    pub gsrm_mint: Account<'info, Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint = gsrm_mint,
+        associated_token::authority = owner
+    )]
+    pub owner_gsrm_account: Account<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = owner,
+        seeds = [b"redeem", &owner.key().to_bytes()[..], user_account.redeem_index.to_string().as_bytes()],
+        bump,
+        space = 8 + std::mem::size_of::<ClaimTicket>()
+    )]
+    pub redeem_ticket: Account<'info, RedeemTicket>,
+
+    pub clock: Sysvar<'info, Clock>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> BurnGSRM<'info> {
+    fn into_burn_gsrm_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
+        let cpi_accounts = Burn {
+            mint: self.gsrm_mint.to_account_info().clone(),
+            from: self.owner_gsrm_account.to_account_info().clone(),
+            authority: self.owner.to_account_info().clone(),
+        };
+        let cpi_program = self.token_program.to_account_info();
+        CpiContext::new(cpi_program, cpi_accounts)
     }
 }
 
@@ -419,7 +517,6 @@ pub struct Init<'info> {
     pub msrm_vault: Account<'info, TokenAccount>,
 
     pub rent: Sysvar<'info, Rent>,
-    // pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -449,8 +546,22 @@ pub struct ClaimTicket {
     pub claim_index: u64,
 }
 
+#[account]
+pub struct RedeemTicket {
+    pub owner: Pubkey,
+    pub is_msrm: bool,
+    pub bump: u8,
+    pub created_at: i64,
+    pub redeem_delay: i64,
+    pub amount: u64,
+    pub redeem_index: u64,
+}
+
 #[error_code]
 pub enum SerumGovError {
     #[msg("Ticket is not currently claimable.")]
     TicketNotClaimable,
+
+    #[msg("Invalid amount for redeeming MSRM.")]
+    InvalidMSRMAmount,
 }
