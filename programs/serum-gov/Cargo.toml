@@ -13,10 +13,16 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
-default = ["test"]
-test = []
+default = []
+test-bpf = []
 
 [dependencies]
 anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
 solana-program = "*"
+
+[dev-dependencies]
+spl-token = { version = "3.3.0", features = ["no-entrypoint"] }
+solana-program-test = "*"
+solana-sdk = "*"
+anchor-client = "0.25.0"

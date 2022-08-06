@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
+use crate::config::parameters::REDEEM_DELAY;
 use crate::errors::*;
-use crate::state::{ClaimTicket, Config, RedeemTicket, User};
+use crate::state::{ClaimTicket, RedeemTicket, User};
 use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
@@ -24,12 +25,11 @@ pub struct BurnGSRM<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
-    #[account(
-        seeds = [b"config"],
-        bump,
-    )]
-    pub config: Account<'info, Config>,
-
+    // #[account(
+    //     seeds = [b"config"],
+    //     bump,
+    // )]
+    // pub config: Account<'info, Config>,
     #[account(
         mut,
         seeds = [b"gSRM"],
@@ -97,7 +97,7 @@ pub fn handler(ctx: Context<BurnGSRM>, amount: u64, is_msrm: bool) -> Result<()>
     ticket.is_msrm = is_msrm;
     ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
     ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    ticket.redeem_delay = ctx.accounts.config.redeem_delay;
+    ticket.redeem_delay = REDEEM_DELAY;
     ticket.amount = redeem_amount;
     ticket.redeem_index = user_account.redeem_index;
 

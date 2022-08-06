@@ -4,7 +4,7 @@ pub mod mints {
     pub const MSRM: Pubkey = pubkey!("MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L");
 }
 
-pub mod authority {
-    use solana_program::{pubkey, pubkey::Pubkey};
-    pub const UPGRADE_AUTHORITY: Pubkey = pubkey!("6fEkZKo7DooQu7YnsifxVRH7do66Jf5xnyXNputt2d5j");
+pub mod parameters {
+    pub const CLAIM_DELAY: i64 = 1000;
+    pub const REDEEM_DELAY: i64 = 1000;
 }

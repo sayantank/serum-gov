@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-#[cfg(not(feature = "test"))]
+#[cfg(not(feature = "test-bpf"))]
 use crate::config::mints::SRM;
 use crate::errors::*;
 use crate::state::RedeemTicket;
@@ -30,7 +30,7 @@ pub struct RedeemSRM<'info> {
     pub redeem_ticket: Account<'info, RedeemTicket>,
 
     #[cfg_attr(
-        not(feature = "test"),
+        not(feature = "test-bpf"),
         account(address = SRM),
     )]
     pub srm_mint: Account<'info, Mint>,

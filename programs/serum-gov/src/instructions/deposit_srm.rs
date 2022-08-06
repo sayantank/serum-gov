@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-#[cfg(not(feature = "test"))]
+#[cfg(not(feature = "test-bpf"))]
 use crate::config::mints::SRM;
-use crate::state::{ClaimTicket, Config, User};
+use crate::{
+    config::parameters::CLAIM_DELAY,
+    state::{ClaimTicket, User},
+};
 
 #[derive(Accounts)]
 pub struct DepositSRM<'info> {
@@ -18,7 +21,7 @@ pub struct DepositSRM<'info> {
     pub user_account: Account<'info, User>,
 
     #[cfg_attr(
-        not(feature = "test"),
+        not(feature = "test-bpf"),
         account(address = SRM),
     )]
     pub srm_mint: Account<'info, Mint>,
@@ -37,12 +40,11 @@ pub struct DepositSRM<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
-    #[account(
-        seeds = [b"config"],
-        bump,
-    )]
-    pub config: Account<'info, Config>,
-
+    // #[account(
+    //     seeds = [b"config"],
+    //     bump,
+    // )]
+    // pub config: Account<'info, Config>,
     #[account(
         mut,
         token::mint = srm_mint,
@@ -86,7 +88,7 @@ pub fn handler(ctx: Context<DepositSRM>, amount: u64) -> Result<()> {
     ticket.is_msrm = false;
     ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
     ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    ticket.claim_delay = ctx.accounts.config.claim_delay;
+    ticket.claim_delay = CLAIM_DELAY;
     ticket.amount = amount;
     ticket.claim_index = user_account.claim_index;
 

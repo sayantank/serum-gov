@@ -1,21 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-#[cfg(not(feature = "test"))]
-use crate::config::{
-    authority::UPGRADE_AUTHORITY,
-    mints::{MSRM, SRM},
-};
-use crate::state::Config;
+#[cfg(not(feature = "test-bpf"))]
+use crate::config::mints::{MSRM, SRM};
 
 #[derive(Accounts)]
 pub struct Init<'info> {
     /// NOTE: Could add constraint to restrict authorized payer, but this ix can't be called twice anyway.
     #[account(mut)]
-    #[cfg_attr(
-        not(feature = "test"),
-        account(address = UPGRADE_AUTHORITY),
-    )]
     pub payer: Signer<'info>,
 
     /// CHECK: Just a PDA for vault authorities.
@@ -25,15 +17,14 @@ pub struct Init<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
-    #[account(
-        init,
-        payer = payer,
-        seeds = [b"config"],
-        bump,
-        space = 8 + std::mem::size_of::<Config>()
-    )]
-    pub config: Account<'info, Config>,
-
+    // #[account(
+    //     init,
+    //     payer = payer,
+    //     seeds = [b"config"],
+    //     bump,
+    //     space = 8 + std::mem::size_of::<Config>()
+    // )]
+    // pub config: Account<'info, Config>,
     /// NOTE: Decimals have been kept same as SRM.
     #[account(
         init,
@@ -46,7 +37,7 @@ pub struct Init<'info> {
     pub gsrm_mint: Account<'info, Mint>,
 
     #[cfg_attr(
-        not(feature = "test"),
+        not(feature = "test-bpf"),
         account(address = SRM),
     )]
     pub srm_mint: Account<'info, Mint>,
@@ -62,7 +53,7 @@ pub struct Init<'info> {
     pub srm_vault: Account<'info, TokenAccount>,
 
     #[cfg_attr(
-        not(feature = "test"),
+        not(feature = "test-bpf"),
         account(address = MSRM),
     )]
     pub msrm_mint: Account<'info, Mint>,
@@ -82,11 +73,13 @@ pub struct Init<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<Init>, claim_delay: i64, redeem_delay: i64) -> Result<()> {
-    let config = &mut ctx.accounts.config;
+pub fn handler(_ctx: Context<Init>) -> Result<()> {
+    // let config = &mut ctx.accounts.config;
 
-    config.claim_delay = claim_delay;
-    config.redeem_delay = redeem_delay;
+    // config.claim_delay = claim_delay;
+    // config.redeem_delay = redeem_delay;
+
+    msg!("Initializing Serum Gov");
 
     Ok(())
 }
