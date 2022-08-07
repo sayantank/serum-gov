@@ -22,6 +22,7 @@ anchor-spl = "0.25.0"
 solana-program = "*"
 
 [dev-dependencies]
+spl-associated-token-account = {version = "1.0.5", features = ["no-entrypoint"] }
 spl-token = { version = "3.3.0", features = ["no-entrypoint"] }
 solana-program-test = "*"
 solana-sdk = "*"

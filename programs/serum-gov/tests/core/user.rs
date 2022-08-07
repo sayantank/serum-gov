@@ -1,6 +1,7 @@
 #![allow(unused)]
 
-use anchor_lang::{InstructionData, ToAccountMetas};
+use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use serum_gov::state::User;
 use solana_program_test::{BanksClientError, ProgramTestContext};
 use solana_sdk::{
     instruction::Instruction, pubkey::Pubkey, signature::Keypair, signer::Signer, system_program,
@@ -51,5 +52,16 @@ impl UserAccount {
         );
 
         context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn get_user_account_data(&self, context: &mut ProgramTestContext) -> User {
+        let user_account = context
+            .banks_client
+            .get_account(self.user_account)
+            .await
+            .unwrap()
+            .unwrap();
+
+        User::try_deserialize(&mut user_account.data.as_ref()).unwrap()
     }
 }
