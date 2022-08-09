@@ -24,9 +24,7 @@ pub fn handler(ctx: Context<InitUser>) -> Result<()> {
 
     user.owner = ctx.accounts.owner.key();
     user.bump = *ctx.bumps.get("user_account").unwrap();
-    user.claim_index = 0;
-    user.redeem_index = 0;
-    user.vest_index = 0;
+    user.lock_index = 0;
 
     Ok(())
 }

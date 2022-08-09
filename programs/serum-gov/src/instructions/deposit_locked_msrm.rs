@@ -5,7 +5,8 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 use crate::config::mints::MSRM;
 use crate::{
     config::parameters::CLAIM_DELAY,
-    state::{ClaimTicket, User},
+    state::{ClaimTicket, LockedAccount, User},
+    MSRM_MULTIPLIER,
 };
 
 #[derive(Accounts)]
@@ -55,8 +56,15 @@ pub struct DepositMSRM<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"claim", &owner.key().to_bytes()[..], user_account.claim_index.to_string().as_bytes()],
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_string().as_bytes()],
         bump,
+        space = 8 + std::mem::size_of::<LockedAccount>()
+    )]
+    pub locked_account: Account<'info, LockedAccount>,
+
+    #[account(
+        init,
+        payer = owner,
         space =  8 + std::mem::size_of::<ClaimTicket>()
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
@@ -83,16 +91,25 @@ pub fn handler(ctx: Context<DepositMSRM>, amount: u64) -> Result<()> {
 
     let user_account = &mut ctx.accounts.user_account;
 
-    let ticket = &mut ctx.accounts.claim_ticket;
-    ticket.owner = ctx.accounts.owner.key();
-    ticket.is_msrm = true;
-    ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
-    ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    ticket.claim_delay = CLAIM_DELAY;
-    ticket.amount = amount;
-    ticket.claim_index = user_account.claim_index;
+    let gsrm_amount = amount.checked_mul(MSRM_MULTIPLIER).unwrap();
 
-    user_account.claim_index += 1;
+    let locked_account = &mut ctx.accounts.locked_account;
+    // locked_account.claim_ticket = ctx.accounts.claim_ticket.key();
+    locked_account.owner = ctx.accounts.owner.key();
+    locked_account.lock_index = user_account.lock_index;
+    locked_account.is_msrm = true;
+    // locked_account.redeem_index = 0;
+    locked_account.total_gsrm_amount = gsrm_amount;
+    locked_account.gsrm_burned = 0;
+    locked_account.bump = *ctx.bumps.get("locked_account").unwrap();
+
+    let claim_ticket = &mut ctx.accounts.claim_ticket;
+    claim_ticket.owner = ctx.accounts.owner.key();
+    claim_ticket.created_at = ctx.accounts.clock.unix_timestamp;
+    claim_ticket.claim_delay = CLAIM_DELAY;
+    claim_ticket.gsrm_amount = gsrm_amount;
+
+    user_account.lock_index += 1;
 
     Ok(())
 }

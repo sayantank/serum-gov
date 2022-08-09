@@ -10,4 +10,10 @@ pub enum SerumGovError {
 
     #[msg("Invalid RedeemTicket")]
     InvalidRedeemTicket,
+
+    #[msg("Invalid owner for ticket.")]
+    InvalidTicketOwner,
+
+    #[msg("Invalid amount for burning gSRM.")]
+    InvalidGSRMAmount,
 }

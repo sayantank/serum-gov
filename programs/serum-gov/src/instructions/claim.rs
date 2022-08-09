@@ -3,22 +3,19 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 
 use crate::errors::*;
 use crate::state::ClaimTicket;
-use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
-#[instruction(claim_index: u64)]
 pub struct Claim<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(
         mut,
-        seeds = [b"claim", &owner.key().to_bytes()[..], claim_index.to_string().as_bytes()],
-        bump,
-        constraint = (ticket.created_at + ticket.claim_delay) <= clock.unix_timestamp @ SerumGovError::TicketNotClaimable,
+        constraint = claim_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
+        constraint = clock.unix_timestamp >= (claim_ticket.created_at + claim_ticket.claim_delay) @ SerumGovError::TicketNotClaimable,
         close = owner
     )]
-    pub ticket: Account<'info, ClaimTicket>,
+    pub claim_ticket: Account<'info, ClaimTicket>,
 
     /// CHECK: Just a PDA for vault authorities.
     #[account(
@@ -61,20 +58,14 @@ impl<'info> Claim<'info> {
     }
 }
 
-pub fn handler(ctx: Context<Claim>, _claim_index: u64) -> Result<()> {
-    let ticket = &mut ctx.accounts.ticket;
-
-    let mint_amount = if ticket.is_msrm {
-        ticket.amount.checked_mul(MSRM_MULTIPLIER).unwrap()
-    } else {
-        ticket.amount
-    };
+pub fn handler(ctx: Context<Claim>) -> Result<()> {
+    let claim_ticket = &ctx.accounts.claim_ticket;
 
     token::mint_to(
         ctx.accounts
             .mint_gsrm()
             .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
-        mint_amount,
+        claim_ticket.gsrm_amount,
     )?;
 
     Ok(())

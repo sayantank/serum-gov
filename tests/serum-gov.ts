@@ -19,6 +19,7 @@ import { SerumGov } from "../target/types/serum_gov";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 import { assert, expect } from "chai";
 import { BN } from "bn.js";
+import { sleep } from "./utils";
 
 const MSRM_MULTIPLIER = 1_000_000_000_000;
 
@@ -48,16 +49,12 @@ describe("serum-gov", () => {
   let aliceMSRMAccount: PublicKey;
   let aliceGSRMAccount: PublicKey;
 
-  const [authority, authorityBump] = findProgramAddressSync(
+  const [authority] = findProgramAddressSync(
     [Buffer.from("authority")],
     program.programId
   );
   const [GSRM_MINT] = findProgramAddressSync(
     [Buffer.from("gSRM")],
-    program.programId
-  );
-  const [configAccount] = findProgramAddressSync(
-    [Buffer.from("config")],
     program.programId
   );
 
@@ -175,7 +172,7 @@ describe("serum-gov", () => {
     expect(vaultMsrm.value.uiAmount).to.equal(0);
   });
 
-  it("cant init vaults twice", async () => {
+  it("cant init twice", async () => {
     try {
       await program.methods
         .init()
@@ -199,321 +196,433 @@ describe("serum-gov", () => {
     }
   });
 
-  // it("can init user", async () => {
-  //   const tx = await program.methods
-  //     .initUser()
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       userAccount: aliceUserAccount,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+  it("can init user", async () => {
+    const tx = await program.methods
+      .initUser()
+      .accounts({
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
 
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    const aliceAccount = await program.account.user.fetch(aliceUserAccount);
 
-  //   expect(aliceAccount.owner.toBase58()).to.equal(alice.publicKey.toBase58());
-  //   expect(aliceAccount.claimIndex.toNumber()).to.equal(0);
-  //   expect(aliceAccount.redeemIndex.toNumber()).to.equal(0);
-  // });
+    expect(aliceAccount.owner.toBase58()).to.equal(alice.publicKey.toBase58());
+    expect(aliceAccount.lockIndex.toNumber()).to.equal(0);
+  });
 
-  // it("can deposit srm", async () => {
-  //   // CLAIM_INDEX = 0
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   const [claimTicket] = findProgramAddressSync(
-  //     [
-  //       Buffer.from("claim"),
-  //       alice.publicKey.toBuffer(),
-  //       Buffer.from(aliceAccount.claimIndex.toString()),
-  //     ],
-  //     program.programId
-  //   );
+  it("can deposit srm", async () => {
+    const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(aliceAccount.lockIndex.toString()),
+      ],
+      program.programId
+    );
 
-  //   await program.methods
-  //     .depositSrm(new BN(200_000_000))
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       userAccount: aliceUserAccount,
-  //       srmMint: SRM_MINT,
-  //       ownerSrmAccount: aliceSRMAccount,
-  //       authority,
-  //       config: configAccount,
-  //       srmVault,
-  //       claimTicket,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+    const claimTicket = Keypair.generate();
 
-  //   const aliceClaimTicket = await program.account.claimTicket.fetch(
-  //     claimTicket
-  //   );
-  //   expect(aliceClaimTicket.owner.toBase58()).to.equal(
-  //     alice.publicKey.toBase58()
-  //   );
-  //   expect(aliceClaimTicket.claimIndex.toNumber()).to.equal(0);
-  //   expect(aliceClaimTicket.amount.toNumber()).to.equal(200_000_000);
-  //   expect(aliceClaimTicket.isMsrm).to.equal(false);
+    await program.methods
+      .depositLockedSrm(new BN(200_000_000))
+      .accounts({
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        srmMint: SRM_MINT,
+        ownerSrmAccount: aliceSRMAccount,
+        authority,
+        srmVault,
+        lockedAccount: aliceLockedAccount,
+        claimTicket: claimTicket.publicKey,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice, claimTicket])
+      .rpc();
 
-  //   const srmVaultBalance = await connection.getTokenAccountBalance(srmVault);
-  //   expect(srmVaultBalance.value.uiAmount).to.equal(200);
-  // });
+    const aliceClaimTicket = await program.account.claimTicket.fetch(
+      claimTicket.publicKey
+    );
+    expect(aliceClaimTicket.owner.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+    expect(aliceClaimTicket.gsrmAmount.toNumber()).to.equal(200_000_000);
+    expect(aliceClaimTicket.claimDelay.toNumber()).to.equal(2);
 
-  // it("can deposit msrm", async () => {
-  //   // CLAIM_INDEX = 1
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   const [msrmTicket] = findProgramAddressSync(
-  //     [
-  //       Buffer.from("claim"),
-  //       alice.publicKey.toBuffer(),
-  //       Buffer.from(aliceAccount.claimIndex.toString()),
-  //     ],
-  //     program.programId
-  //   );
+    const srmVaultBalance = await connection.getTokenAccountBalance(srmVault);
+    expect(srmVaultBalance.value.uiAmount).to.equal(200);
+  });
 
-  //   await program.methods
-  //     .depositMsrm(new BN(1))
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       userAccount: aliceUserAccount,
-  //       msrmMint: MSRM_MINT,
-  //       config: configAccount,
-  //       ownerMsrmAccount: aliceMSRMAccount,
-  //       authority,
-  //       msrmVault,
-  //       claimTicket: msrmTicket,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc({ skipPreflight: true });
+  it("can deposit msrm", async () => {
+    const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(aliceAccount.lockIndex.toString()),
+      ],
+      program.programId
+    );
 
-  //   const aliceClaimTicket = await program.account.claimTicket.fetch(
-  //     msrmTicket
-  //   );
-  //   expect(aliceClaimTicket.owner.toBase58()).to.equal(
-  //     alice.publicKey.toBase58()
-  //   );
-  //   expect(aliceClaimTicket.claimIndex.toNumber()).to.equal(1);
-  //   expect(aliceClaimTicket.amount.toNumber()).to.equal(1);
-  //   expect(aliceClaimTicket.isMsrm).to.equal(true);
+    let claimTicket = Keypair.generate();
 
-  //   const msrmVaultBalance = await connection.getTokenAccountBalance(msrmVault);
-  //   expect(msrmVaultBalance.value.uiAmount).to.equal(1);
-  // });
+    await program.methods
+      .depositLockedMsrm(new BN(1))
+      .accounts({
+        owner: alice.publicKey,
+        userAccount: aliceUserAccount,
+        msrmMint: MSRM_MINT,
+        ownerMsrmAccount: aliceMSRMAccount,
+        authority,
+        msrmVault,
+        lockedAccount: aliceLockedAccount,
+        claimTicket: claimTicket.publicKey,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice, claimTicket])
+      .rpc();
 
-  // it("can claim for srm ticket", async () => {
-  //   // const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   aliceGSRMAccount = await createAssociatedTokenAccount(
-  //     connection,
-  //     alice,
-  //     GSRM_MINT,
-  //     alice.publicKey
-  //   );
+    const aliceClaimTicket = await program.account.claimTicket.fetch(
+      claimTicket.publicKey
+    );
+    expect(aliceClaimTicket.owner.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+    expect(aliceClaimTicket.gsrmAmount.toNumber()).to.equal(
+      1 * MSRM_MULTIPLIER
+    );
+    expect(aliceClaimTicket.claimDelay.toNumber()).to.equal(2);
 
-  //   const [aliceSrmTicket] = findProgramAddressSync(
-  //     [Buffer.from("claim"), alice.publicKey.toBuffer(), Buffer.from("0")],
-  //     program.programId
-  //   );
+    const msrmVaultBalance = await connection.getTokenAccountBalance(msrmVault);
+    expect(msrmVaultBalance.value.uiAmount).to.equal(1);
+  });
 
-  //   await program.methods
-  //     .claim(new BN(0))
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       ticket: aliceSrmTicket,
-  //       authority,
-  //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+  it("can claim tickets", async () => {
+    // const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    await sleep(2);
 
-  //   const aliceGsrmBalance = await connection.getTokenAccountBalance(
-  //     aliceGSRMAccount
-  //   );
+    aliceGSRMAccount = await createAssociatedTokenAccount(
+      connection,
+      alice,
+      GSRM_MINT,
+      alice.publicKey
+    );
 
-  //   expect(aliceGsrmBalance.value.uiAmount).to.equal(200);
+    let aliceClaimTickets = await program.account.claimTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
 
-  //   try {
-  //     await program.account.claimTicket.fetch(aliceSrmTicket);
-  //     assert(false);
-  //   } catch (e) {
-  //     if (e instanceof Error) {
-  //       assert(true);
-  //     }
-  //   }
-  // });
+    await Promise.all(
+      aliceClaimTickets.map((claimTicket) =>
+        program.methods
+          .claim()
+          .accounts({
+            owner: alice.publicKey,
+            claimTicket: claimTicket.publicKey,
+            authority,
+            gsrmMint: GSRM_MINT,
+            ownerGsrmAccount: aliceGSRMAccount,
+            clock: SYSVAR_CLOCK_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([alice])
+          .rpc()
+      )
+    );
 
-  // it("can claim for msrm ticket", async () => {
-  //   const [aliceMsrmTicket] = findProgramAddressSync(
-  //     [Buffer.from("claim"), alice.publicKey.toBuffer(), Buffer.from("1")],
-  //     program.programId
-  //   );
+    const aliceGsrmBalance = await connection.getTokenAccountBalance(
+      aliceGSRMAccount
+    );
 
-  //   await program.methods
-  //     .claim(new BN(1))
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       ticket: aliceMsrmTicket,
-  //       authority,
-  //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+    expect(aliceGsrmBalance.value.uiAmount).to.equal(1_000_000 + 200);
 
-  //   const aliceGsrmBalance = await connection.getTokenAccountBalance(
-  //     aliceGSRMAccount
-  //   );
+    aliceClaimTickets = await program.account.claimTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
+    expect(aliceClaimTickets.length).to.equal(0);
+  });
 
-  //   expect(aliceGsrmBalance.value.uiAmount).to.equal(200 + 1_000_000);
+  it("can burn gsrm for locked srm", async () => {
+    const lockIndex = 0;
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(lockIndex.toString()),
+      ],
+      program.programId
+    );
 
-  //   try {
-  //     await program.account.claimTicket.fetch(aliceMsrmTicket);
-  //     assert(false);
-  //   } catch (e) {
-  //     if (e instanceof Error) {
-  //       assert(true);
-  //     }
-  //   }
-  // });
+    const redeemTicket = Keypair.generate();
 
-  // it("can burn gsrm for srm", async () => {
-  //   // REDEEM_INDEX = 0
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   const [redeemTicket] = findProgramAddressSync(
-  //     [
-  //       Buffer.from("redeem"),
-  //       alice.publicKey.toBuffer(),
-  //       Buffer.from(aliceAccount.redeemIndex.toString()),
-  //     ],
-  //     program.programId
-  //   );
+    await program.methods
+      .burnLockedGsrm(new BN(lockIndex), new BN(100_000_000))
+      .accounts({
+        owner: alice.publicKey,
+        authority,
+        gsrmMint: GSRM_MINT,
+        ownerGsrmAccount: aliceGSRMAccount,
+        lockedAccount: aliceLockedAccount,
+        redeemTicket: redeemTicket.publicKey,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice, redeemTicket])
+      .rpc();
 
-  //   await program.methods
-  //     .burnGsrm(new BN(100_000_000), false)
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       userAccount: aliceUserAccount,
-  //       authority,
-  //       config: configAccount,
-  //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
-  //       redeemTicket,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+    const aliceRedeemTicket = await program.account.redeemTicket.fetch(
+      redeemTicket.publicKey
+    );
+    expect(aliceRedeemTicket.owner.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+    expect(aliceRedeemTicket.isMsrm).to.equal(false);
+    expect(aliceRedeemTicket.redeemDelay.toNumber()).to.equal(2);
+    expect(aliceRedeemTicket.amount.toNumber()).to.equal(100_000_000);
 
-  //   const aliceRedeemTicket = await program.account.redeemTicket.fetch(
-  //     redeemTicket
-  //   );
-  //   expect(aliceRedeemTicket.owner.toBase58()).to.equal(
-  //     alice.publicKey.toBase58()
-  //   );
-  //   expect(aliceRedeemTicket.isMsrm).to.equal(false);
-  //   expect(aliceRedeemTicket.redeemDelay.toNumber()).to.equal(0);
-  //   expect(aliceRedeemTicket.amount.toNumber()).to.equal(100_000_000);
+    const aliceGSRMBalance = await connection.getTokenAccountBalance(
+      aliceGSRMAccount
+    );
+    expect(aliceGSRMBalance.value.uiAmount).to.equal(1_000_100);
+  });
 
-  //   const aliceGSRMBalance = await connection.getTokenAccountBalance(
-  //     aliceGSRMAccount
-  //   );
-  //   expect(aliceGSRMBalance.value.uiAmount).to.equal(1_000_100);
-  // });
+  it("cant burn gsrm if amount exceeds locked amount", async () => {
+    // Here, user has more than 200 gSRM because , but the LockedAccount has only 100 gSRM left to be redeemed.
+    const lockIndex = 0;
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(lockIndex.toString()),
+      ],
+      program.programId
+    );
 
-  // it("can burn gsrm for msrm", async () => {
-  //   // REDEEM_INDEX = 1
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   const [redeemTicket] = findProgramAddressSync(
-  //     [
-  //       Buffer.from("redeem"),
-  //       alice.publicKey.toBuffer(),
-  //       Buffer.from(aliceAccount.redeemIndex.toString()),
-  //     ],
-  //     program.programId
-  //   );
+    const redeemTicket = Keypair.generate();
 
-  //   await program.methods
-  //     .burnGsrm(new BN(MSRM_MULTIPLIER), true)
-  //     .accounts({
-  //       owner: alice.publicKey,
-  //       userAccount: aliceUserAccount,
-  //       authority,
-  //       config: configAccount,
-  //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
-  //       redeemTicket,
-  //       clock: SYSVAR_CLOCK_PUBKEY,
-  //       tokenProgram: TOKEN_PROGRAM_ID,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([alice])
-  //     .rpc();
+    try {
+      await program.methods
+        .burnLockedGsrm(new BN(lockIndex), new BN(200_000_000))
+        .accounts({
+          owner: alice.publicKey,
+          authority,
+          gsrmMint: GSRM_MINT,
+          ownerGsrmAccount: aliceGSRMAccount,
+          lockedAccount: aliceLockedAccount,
+          redeemTicket: redeemTicket.publicKey,
+          clock: SYSVAR_CLOCK_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([alice, redeemTicket])
+        .rpc();
+    } catch (e) {
+      if (e instanceof AnchorError) {
+        assert(true, e.error.errorMessage);
+      } else assert(false);
+    }
+  });
 
-  //   const aliceRedeemTicket = await program.account.redeemTicket.fetch(
-  //     redeemTicket
-  //   );
-  //   expect(aliceRedeemTicket.owner.toBase58()).to.equal(
-  //     alice.publicKey.toBase58()
-  //   );
-  //   expect(aliceRedeemTicket.isMsrm).to.equal(true);
-  //   expect(aliceRedeemTicket.redeemDelay.toNumber()).to.equal(0);
-  //   expect(aliceRedeemTicket.amount.toNumber()).to.equal(1);
+  it("cant burn gsrm for locked msrm with invalid amount", async () => {
+    const lockIndex = 1;
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(lockIndex.toString()),
+      ],
+      program.programId
+    );
 
-  //   const aliceGSRMBalance = await connection.getTokenAccountBalance(
-  //     aliceGSRMAccount
-  //   );
-  //   expect(aliceGSRMBalance.value.uiAmount).to.equal(100);
-  // });
+    const redeemTicket = Keypair.generate();
 
-  // it("cant burn gsrm for msrm with invalid amount", async () => {
-  //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-  //   const [redeemTicket] = findProgramAddressSync(
-  //     [
-  //       Buffer.from("redeem"),
-  //       alice.publicKey.toBuffer(),
-  //       Buffer.from(aliceAccount.redeemIndex.toString()),
-  //     ],
-  //     program.programId
-  //   );
+    try {
+      await program.methods
+        .burnLockedGsrm(new BN(lockIndex), new BN(MSRM_MULTIPLIER - 1_000))
+        .accounts({
+          owner: alice.publicKey,
+          authority,
+          gsrmMint: GSRM_MINT,
+          ownerGsrmAccount: aliceGSRMAccount,
+          lockedAccount: aliceLockedAccount,
+          redeemTicket: redeemTicket.publicKey,
+          clock: SYSVAR_CLOCK_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([alice, redeemTicket])
+        .rpc();
+    } catch (e) {
+      if (e instanceof AnchorError) {
+        assert(true, e.error.errorMessage);
+      } else assert(false);
+    }
+  });
 
-  //   try {
-  //     await program.methods
-  //       .burnGsrm(new BN(MSRM_MULTIPLIER + 10), true)
-  //       .accounts({
-  //         owner: alice.publicKey,
-  //         userAccount: aliceUserAccount,
-  //         authority,
-  //         config: configAccount,
-  //         gsrmMint: GSRM_MINT,
-  //         ownerGsrmAccount: aliceGSRMAccount,
-  //         redeemTicket,
-  //         clock: SYSVAR_CLOCK_PUBKEY,
-  //         tokenProgram: TOKEN_PROGRAM_ID,
-  //         systemProgram: SystemProgram.programId,
-  //       })
-  //       .signers([alice])
-  //       .rpc();
-  //   } catch (e) {
-  //     if (e instanceof AnchorError) {
-  //       assert(true, e.error.errorMessage);
-  //     } else {
-  //       console.error(e);
-  //       assert(false);
-  //     }
-  //   }
-  // });
+  it("can burn gsrm for locked msrm", async () => {
+    const lockIndex = 1;
+    const [aliceLockedAccount] = findProgramAddressSync(
+      [
+        Buffer.from("locked_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(lockIndex.toString()),
+      ],
+      program.programId
+    );
+
+    const redeemTicket = Keypair.generate();
+
+    await program.methods
+      .burnLockedGsrm(new BN(lockIndex), new BN(1 * MSRM_MULTIPLIER))
+      .accounts({
+        owner: alice.publicKey,
+        authority,
+        gsrmMint: GSRM_MINT,
+        ownerGsrmAccount: aliceGSRMAccount,
+        lockedAccount: aliceLockedAccount,
+        redeemTicket: redeemTicket.publicKey,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice, redeemTicket])
+      .rpc();
+
+    const aliceRedeemTicket = await program.account.redeemTicket.fetch(
+      redeemTicket.publicKey
+    );
+    expect(aliceRedeemTicket.owner.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+    expect(aliceRedeemTicket.isMsrm).to.equal(true);
+    expect(aliceRedeemTicket.redeemDelay.toNumber()).to.equal(2);
+    expect(aliceRedeemTicket.amount.toNumber()).to.equal(1);
+
+    const aliceGSRMBalance = await connection.getTokenAccountBalance(
+      aliceGSRMAccount
+    );
+    expect(aliceGSRMBalance.value.uiAmount).to.equal(100);
+
+    // This should also close the LockedAccount
+    try {
+      await program.account.lockedAccount.fetch(aliceLockedAccount);
+      assert(false);
+    } catch (e) {
+      assert(true);
+    }
+  });
+
+  it("can redeem ticket for srm", async () => {
+    await sleep(2);
+    let redeemTickets = await program.account.redeemTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
+
+    const [redeemTicket] = redeemTickets.filter(
+      (ticket) => ticket.account.isMsrm === false
+    );
+
+    await program.methods
+      .redeemSrm()
+      .accounts({
+        owner: alice.publicKey,
+        authority,
+        redeemTicket: redeemTicket.publicKey,
+        srmMint: SRM_MINT,
+        srmVault,
+        ownerSrmAccount: aliceSRMAccount,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
+
+    const aliceSrmBalance = await connection.getTokenAccountBalance(
+      aliceSRMAccount
+    );
+
+    expect(aliceSrmBalance.value.uiAmount).to.equal(100);
+
+    redeemTickets = await program.account.redeemTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
+
+    expect(redeemTickets.length).to.equal(1);
+  });
+
+  it("can redeem ticket for msrm", async () => {
+    // Since only one ticket should be remaining
+    const [redeemTicket] = await program.account.redeemTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
+
+    await program.methods
+      .redeemMsrm()
+      .accounts({
+        owner: alice.publicKey,
+        authority,
+        redeemTicket: redeemTicket.publicKey,
+        msrmMint: MSRM_MINT,
+        msrmVault,
+        ownerMsrmAccount: aliceMSRMAccount,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([alice])
+      .rpc();
+
+    const aliceMsrmBalance = await connection.getTokenAccountBalance(
+      aliceMSRMAccount
+    );
+
+    expect(aliceMsrmBalance.value.uiAmount).to.equal(2);
+
+    const redeemTickets = await program.account.redeemTicket.all([
+      {
+        memcmp: {
+          offset: 8,
+          bytes: alice.publicKey.toBase58(),
+        },
+      },
+    ]);
+
+    expect(redeemTickets.length).to.equal(0);
+  });
 
   // it("cant redeem msrm with srm ticket", async () => {
   //   const [redeemTicket] = findProgramAddressSync(
@@ -548,6 +657,8 @@ describe("serum-gov", () => {
   // });
 
   // it("can redeem srm", async () => {
+  //   await sleep(2);
+
   //   const [redeemTicket] = findProgramAddressSync(
   //     [Buffer.from("redeem"), alice.publicKey.toBuffer(), Buffer.from("0")],
   //     program.programId
@@ -653,21 +764,6 @@ describe("serum-gov", () => {
   //   }
   // });
 
-  // it("can update config", async () => {
-  //   await program.methods
-  //     .updateConfig(new BN(2000), new BN(2000))
-  //     .accounts({
-  //       upgradeAuthority: sbf.publicKey,
-  //       config: configAccount,
-  //     })
-  //     .signers([sbf])
-  //     .rpc();
-
-  //   const config = await program.account.config.fetch(configAccount);
-  //   expect(config.claimDelay.toNumber()).to.equal(2000);
-  //   expect(config.redeemDelay.toNumber()).to.equal(2000);
-  // });
-
   // it("cant claim before claim_delay", async () => {
   //   const aliceAccount = await program.account.user.fetch(aliceUserAccount);
   //   const [claimTicket] = findProgramAddressSync(
@@ -687,7 +783,6 @@ describe("serum-gov", () => {
   //       srmMint: SRM_MINT,
   //       ownerSrmAccount: aliceSRMAccount,
   //       authority,
-  //       config: configAccount,
   //       srmVault,
   //       claimTicket,
   //       clock: SYSVAR_CLOCK_PUBKEY,
@@ -739,7 +834,6 @@ describe("serum-gov", () => {
   //       owner: alice.publicKey,
   //       userAccount: aliceUserAccount,
   //       authority,
-  //       config: configAccount,
   //       gsrmMint: GSRM_MINT,
   //       ownerGsrmAccount: aliceGSRMAccount,
   //       redeemTicket,

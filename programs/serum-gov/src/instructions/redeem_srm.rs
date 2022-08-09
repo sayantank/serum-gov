@@ -7,7 +7,6 @@ use crate::errors::*;
 use crate::state::RedeemTicket;
 
 #[derive(Accounts)]
-#[instruction(redeem_index: u64)]
 pub struct RedeemSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -21,8 +20,7 @@ pub struct RedeemSRM<'info> {
 
     #[account(
         mut,
-        seeds = [b"redeem", &owner.key().to_bytes()[..], redeem_index.to_string().as_bytes()],
-        bump,
+        constraint = redeem_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
         constraint = redeem_ticket.is_msrm == false @ SerumGovError::InvalidRedeemTicket,
         constraint = (redeem_ticket.created_at + redeem_ticket.redeem_delay) <= clock.unix_timestamp @ SerumGovError::TicketNotClaimable,
         close = owner
@@ -66,7 +64,7 @@ impl<'info> RedeemSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<RedeemSRM>, _redeem_index: u64) -> Result<()> {
+pub fn handler(ctx: Context<RedeemSRM>) -> Result<()> {
     token::transfer(
         ctx.accounts
             .into_redeem_srm_context()

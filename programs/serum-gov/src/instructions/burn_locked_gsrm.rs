@@ -1,22 +1,16 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
 use crate::config::parameters::REDEEM_DELAY;
 use crate::errors::*;
-use crate::state::{ClaimTicket, RedeemTicket, User};
+use crate::state::{LockedAccount, RedeemTicket};
 use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
+#[instruction(lock_index: u64)]
 pub struct BurnGSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
-
-    #[account(
-        mut,
-        seeds = [b"user", &owner.key().to_bytes()[..]],
-        bump,
-    )]
-    pub user_account: Account<'info, User>,
 
     /// CHECK: Just a PDA for vault authorities.
     #[account(
@@ -25,11 +19,6 @@ pub struct BurnGSRM<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
-    // #[account(
-    //     seeds = [b"config"],
-    //     bump,
-    // )]
-    // pub config: Account<'info, Config>,
     #[account(
         mut,
         seeds = [b"gSRM"],
@@ -47,11 +36,16 @@ pub struct BurnGSRM<'info> {
     pub owner_gsrm_account: Account<'info, TokenAccount>,
 
     #[account(
+        mut,
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], lock_index.to_string().as_bytes()],
+        bump,
+    )]
+    pub locked_account: Account<'info, LockedAccount>,
+
+    #[account(
         init,
         payer = owner,
-        seeds = [b"redeem", &owner.key().to_bytes()[..], user_account.redeem_index.to_string().as_bytes()],
-        bump,
-        space = 8 + std::mem::size_of::<ClaimTicket>()
+        space = 8 + std::mem::size_of::<RedeemTicket>()
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
 
@@ -72,11 +66,7 @@ impl<'info> BurnGSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<BurnGSRM>, amount: u64, is_msrm: bool) -> Result<()> {
-    if is_msrm && (amount % MSRM_MULTIPLIER != 0) {
-        return err!(SerumGovError::InvalidMSRMAmount);
-    }
-
+pub fn handler(ctx: Context<BurnGSRM>, _lock_index: u64, amount: u64) -> Result<()> {
     token::burn(
         ctx.accounts
             .into_burn_gsrm_context()
@@ -84,24 +74,39 @@ pub fn handler(ctx: Context<BurnGSRM>, amount: u64, is_msrm: bool) -> Result<()>
         amount,
     )?;
 
-    let redeem_amount = if is_msrm {
+    let locked_account = &mut ctx.accounts.locked_account;
+
+    // CHECK: User can only burn gSRM tokens received from this LockedAccount.
+    if amount + locked_account.gsrm_burned > locked_account.total_gsrm_amount {
+        return err!(SerumGovError::InvalidGSRMAmount);
+    }
+
+    // CHECK: Amount must be multiple of MSRM_MULTIPLIER if LockedAccount was created on depositing MSRM tokens.
+    if locked_account.is_msrm && (amount % MSRM_MULTIPLIER != 0) {
+        return err!(SerumGovError::InvalidMSRMAmount);
+    }
+
+    locked_account.gsrm_burned += amount;
+
+    // Closing LockedAccount if all gSRM tokens were burned.
+    if locked_account.gsrm_burned == locked_account.total_gsrm_amount {
+        locked_account.close(ctx.accounts.owner.to_account_info())?;
+    }
+
+    // Calculating amount of SRM or gSRM tokens to be redeemed back.
+    // NOTE: User cannot redeem SRM from a MSRM LockedAccount.
+    let redeem_amount = if locked_account.is_msrm {
         amount / MSRM_MULTIPLIER
     } else {
         amount
     };
 
-    let user_account = &mut ctx.accounts.user_account;
-
-    let ticket = &mut ctx.accounts.redeem_ticket;
-    ticket.owner = ctx.accounts.owner.key();
-    ticket.is_msrm = is_msrm;
-    ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
-    ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    ticket.redeem_delay = REDEEM_DELAY;
-    ticket.amount = redeem_amount;
-    ticket.redeem_index = user_account.redeem_index;
-
-    user_account.redeem_index += 1;
+    let redeem_ticket = &mut ctx.accounts.redeem_ticket;
+    redeem_ticket.owner = ctx.accounts.owner.key();
+    redeem_ticket.is_msrm = locked_account.is_msrm;
+    redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
+    redeem_ticket.redeem_delay = REDEEM_DELAY;
+    redeem_ticket.amount = redeem_amount;
 
     Ok(())
 }

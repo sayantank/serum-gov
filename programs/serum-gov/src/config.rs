@@ -4,7 +4,14 @@ pub mod mints {
     pub const MSRM: Pubkey = pubkey!("MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L");
 }
 
+#[cfg(not(feature = "test-bpf"))]
 pub mod parameters {
     pub const CLAIM_DELAY: i64 = 1000;
     pub const REDEEM_DELAY: i64 = 1000;
+}
+
+#[cfg(feature = "test-bpf")]
+pub mod parameters {
+    pub const CLAIM_DELAY: i64 = 2;
+    pub const REDEEM_DELAY: i64 = 2;
 }
