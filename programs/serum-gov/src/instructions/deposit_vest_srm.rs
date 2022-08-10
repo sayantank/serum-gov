@@ -104,7 +104,7 @@ pub fn handler(ctx: Context<DepositVestSRM>, amount: u64) -> Result<()> {
     claim_ticket.claim_delay = CLAIM_DELAY;
     claim_ticket.gsrm_amount = amount;
 
-    user_account.vest_index += 1;
+    user_account.vest_index = user_account.vest_index.checked_add(1).unwrap();
 
     Ok(())
 }

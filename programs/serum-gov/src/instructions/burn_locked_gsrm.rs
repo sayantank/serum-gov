@@ -67,6 +67,7 @@ impl<'info> BurnLockedGSRM<'info> {
 }
 
 pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> Result<()> {
+    // Doesn't matter if placed here, or below since txs are atomic.
     token::burn(
         ctx.accounts
             .into_burn_gsrm_context()
@@ -103,7 +104,7 @@ pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> R
 
     let redeem_ticket = &mut ctx.accounts.redeem_ticket;
     redeem_ticket.owner = ctx.accounts.owner.key();
-    redeem_ticket.is_msrm = locked_account.is_msrm;
+    redeem_ticket.is_msrm = locked_account.is_msrm; // This decides whether amount is SRM or gSRM.
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
     redeem_ticket.redeem_delay = REDEEM_DELAY;
     redeem_ticket.amount = redeem_amount;

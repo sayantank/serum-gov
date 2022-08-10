@@ -17,14 +17,6 @@ pub struct Init<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
-    // #[account(
-    //     init,
-    //     payer = payer,
-    //     seeds = [b"config"],
-    //     bump,
-    //     space = 8 + std::mem::size_of::<Config>()
-    // )]
-    // pub config: Account<'info, Config>,
     /// NOTE: Decimals have been kept same as SRM.
     #[account(
         init,
@@ -74,12 +66,6 @@ pub struct Init<'info> {
 }
 
 pub fn handler(_ctx: Context<Init>) -> Result<()> {
-    // let config = &mut ctx.accounts.config;
-
-    // config.claim_delay = claim_delay;
-    // config.redeem_delay = redeem_delay;
-
     msg!("Initializing Serum Gov");
-
     Ok(())
 }

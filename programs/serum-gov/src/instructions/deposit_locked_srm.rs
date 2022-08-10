@@ -86,11 +86,9 @@ pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
     let user_account = &mut ctx.accounts.user_account;
 
     let locked_account = &mut ctx.accounts.locked_account;
-    // locked_account.claim_ticket = ctx.accounts.claim_ticket.key();
     locked_account.owner = ctx.accounts.owner.key();
     locked_account.lock_index = user_account.lock_index;
     locked_account.is_msrm = false;
-    // locked_account.redeem_index = 0;
     locked_account.total_gsrm_amount = amount;
     locked_account.gsrm_burned = 0;
     locked_account.bump = *ctx.bumps.get("locked_account").unwrap();
@@ -101,7 +99,7 @@ pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
     claim_ticket.claim_delay = CLAIM_DELAY;
     claim_ticket.gsrm_amount = amount;
 
-    user_account.lock_index += 1;
+    user_account.lock_index = user_account.lock_index.checked_add(1).unwrap();
 
     Ok(())
 }
