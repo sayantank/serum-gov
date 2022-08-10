@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct DepositMSRM<'info> {
+pub struct DepositLockedMSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
@@ -74,7 +74,7 @@ pub struct DepositMSRM<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> DepositMSRM<'info> {
+impl<'info> DepositLockedMSRM<'info> {
     fn into_deposit_msrm_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
             from: self.owner_msrm_account.to_account_info().clone(),
@@ -86,7 +86,7 @@ impl<'info> DepositMSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<DepositMSRM>, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<DepositLockedMSRM>, amount: u64) -> Result<()> {
     token::transfer(ctx.accounts.into_deposit_msrm_context(), amount)?;
 
     let user_account = &mut ctx.accounts.user_account;

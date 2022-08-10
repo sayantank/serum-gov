@@ -8,7 +8,7 @@ use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
 #[instruction(lock_index: u64)]
-pub struct BurnGSRM<'info> {
+pub struct BurnLockedGSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
@@ -54,7 +54,7 @@ pub struct BurnGSRM<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> BurnGSRM<'info> {
+impl<'info> BurnLockedGSRM<'info> {
     fn into_burn_gsrm_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: self.gsrm_mint.to_account_info().clone(),
@@ -66,7 +66,7 @@ impl<'info> BurnGSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<BurnGSRM>, _lock_index: u64, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> Result<()> {
     token::burn(
         ctx.accounts
             .into_burn_gsrm_context()

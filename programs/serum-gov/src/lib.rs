@@ -24,11 +24,11 @@ pub mod serum_gov {
         init_user::handler(ctx)
     }
 
-    pub fn deposit_locked_srm(ctx: Context<DepositSRM>, amount: u64) -> Result<()> {
+    pub fn deposit_locked_srm(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
         deposit_locked_srm::handler(ctx, amount)
     }
 
-    pub fn deposit_locked_msrm(ctx: Context<DepositMSRM>, amount: u64) -> Result<()> {
+    pub fn deposit_locked_msrm(ctx: Context<DepositLockedMSRM>, amount: u64) -> Result<()> {
         deposit_locked_msrm::handler(ctx, amount)
     }
 
@@ -36,7 +36,11 @@ pub mod serum_gov {
         claim::handler(ctx)
     }
 
-    pub fn burn_locked_gsrm(ctx: Context<BurnGSRM>, lock_index: u64, amount: u64) -> Result<()> {
+    pub fn burn_locked_gsrm(
+        ctx: Context<BurnLockedGSRM>,
+        lock_index: u64,
+        amount: u64,
+    ) -> Result<()> {
         burn_locked_gsrm::handler(ctx, lock_index, amount)
     }
 
