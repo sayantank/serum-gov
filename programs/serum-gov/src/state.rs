@@ -1,12 +1,6 @@
 use anchor_lang::prelude::*;
 
 #[account]
-pub struct Config {
-    pub claim_delay: i64,
-    pub redeem_delay: i64,
-}
-
-#[account]
 pub struct User {
     pub owner: Pubkey,
     pub bump: u8,
