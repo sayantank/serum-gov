@@ -1,19 +1,21 @@
 pub mod burn_locked_gsrm;
+pub mod burn_vest_gsrm;
 pub mod claim;
 pub mod deposit_locked_msrm;
 pub mod deposit_locked_srm;
-pub mod deposit_srm_vest;
+pub mod deposit_vest_srm;
 pub mod init;
 pub mod init_user;
 pub mod redeem_msrm;
 pub mod redeem_srm;
 
 pub use burn_locked_gsrm::*;
+pub use burn_vest_gsrm::*;
 pub use claim::*;
 pub use deposit_locked_msrm::*;
 pub use deposit_locked_msrm::*;
 pub use deposit_locked_srm::*;
-pub use deposit_srm_vest::*;
+pub use deposit_vest_srm::*;
 pub use init::*;
 pub use init_user::*;
 pub use redeem_msrm::*;

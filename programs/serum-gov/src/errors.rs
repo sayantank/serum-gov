@@ -16,4 +16,7 @@ pub enum SerumGovError {
 
     #[msg("Invalid amount for burning gSRM.")]
     InvalidGSRMAmount,
+
+    #[msg("Too early to vest.")]
+    TooEarlyToVest,
 }

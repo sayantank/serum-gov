@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("G8aGmsybmGqQisBuRrDqiGfdz8YcCJcU3agWDFmTkf8S");
+declare_id!("FLjKvZ1sANZud13kx6p6bKtaRKQtCC2VQaFN2aUysZUb");
 
 pub mod config;
 pub mod errors;
@@ -52,7 +52,11 @@ pub mod serum_gov {
         redeem_msrm::handler(ctx)
     }
 
-    // pub fn deposit_srm_vest(ctx: Context<DepositSRMVest>, amount: u64) -> Result<()> {
-    //     Ok(())
-    // }
+    pub fn deposit_vest_srm(ctx: Context<DepositVestSRM>, amount: u64) -> Result<()> {
+        deposit_vest_srm::handler(ctx, amount)
+    }
+
+    pub fn burn_vest_gsrm(ctx: Context<BurnVestGSRM>, vest_index: u64, amount: u64) -> Result<()> {
+        burn_vest_gsrm::handler(ctx, vest_index, amount)
+    }
 }

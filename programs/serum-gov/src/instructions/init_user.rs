@@ -5,11 +5,14 @@ use crate::state::User;
 #[derive(Accounts)]
 pub struct InitUser<'info> {
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub payer: Signer<'info>,
+
+    /// CHECK: Owner for whom the User account is being created.
+    pub owner: AccountInfo<'info>,
 
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         seeds = [b"user", &owner.key().to_bytes()[..]],
         bump,
         space = 8 + std::mem::size_of::<User>()
@@ -25,6 +28,7 @@ pub fn handler(ctx: Context<InitUser>) -> Result<()> {
     user.owner = ctx.accounts.owner.key();
     user.bump = *ctx.bumps.get("user_account").unwrap();
     user.lock_index = 0;
+    user.vest_index = 0;
 
     Ok(())
 }
