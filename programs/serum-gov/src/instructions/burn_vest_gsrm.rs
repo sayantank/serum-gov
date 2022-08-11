@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
 use crate::{
@@ -117,6 +117,10 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
 
     let vest_account = &mut ctx.accounts.vest_account;
     vest_account.gsrm_burned = vest_account.gsrm_burned.checked_add(redeem_amount).unwrap();
+
+    if vest_account.gsrm_burned == vest_account.total_gsrm_amount {
+        vest_account.close(ctx.accounts.owner.to_account_info())?;
+    }
 
     let redeem_ticket = &mut ctx.accounts.redeem_ticket;
     redeem_ticket.owner = ctx.accounts.owner.key();
