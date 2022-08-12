@@ -1,3 +1,5 @@
+use std::cmp;
+
 use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
@@ -90,22 +92,22 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
 
     // If vested_time > linear_vest_period, vested_amount will be greater than total_gsrm_amount.
     // Hence, vested_amount = min(vested_amount, total_gsrm_amount)
-    let vested_amount = if u64::try_from(vested_amount).unwrap() > vest_account.total_gsrm_amount {
-        vest_account.total_gsrm_amount
-    } else {
-        u64::try_from(vested_amount).unwrap()
-    };
+    let vested_amount = cmp::min(
+        u64::try_from(vested_amount).unwrap(),
+        vest_account.total_gsrm_amount,
+    );
 
     // Accounting for already redeemed gsrm
     let redeemable_amount = vested_amount.checked_sub(vest_account.gsrm_burned).unwrap();
 
+    // Just another layer of check if closing account remains vulnerable.
+    if redeemable_amount <= 0 {
+        return err!(SerumGovError::AlreadyRedeemed);
+    }
+
     // If user passed in amount < redeemable_amount, then redeem only that amount
     // redeem_amount = min(redeemable_amount, amount)
-    let redeem_amount = if amount < redeemable_amount {
-        amount
-    } else {
-        redeemable_amount
-    };
+    let redeem_amount = cmp::min(redeemable_amount, amount);
 
     msg!("Redeeming {} gSRM", redeem_amount);
     token::burn(

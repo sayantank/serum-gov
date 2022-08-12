@@ -19,4 +19,7 @@ pub enum SerumGovError {
 
     #[msg("Too early to vest.")]
     TooEarlyToVest,
+
+    #[msg("Already redeemed account.")]
+    AlreadyRedeemed,
 }
