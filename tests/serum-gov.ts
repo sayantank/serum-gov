@@ -9,8 +9,10 @@ import {
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import {
+  createAccount,
   createAssociatedTokenAccount,
   createMint,
+  getAssociatedTokenAddress,
   getMint,
   mintTo,
   TOKEN_PROGRAM_ID,
@@ -45,9 +47,9 @@ describe("serum-gov", () => {
 
   const alice = Keypair.generate();
 
-  let aliceSRMAccount: PublicKey;
-  let aliceMSRMAccount: PublicKey;
-  let aliceGSRMAccount: PublicKey;
+  let aliceSRMAccount = Keypair.generate();
+  let aliceMSRMAccount = Keypair.generate();
+  let aliceGSRMAccount = Keypair.generate();
 
   const [authority] = findProgramAddressSync(
     [Buffer.from("authority")],
@@ -105,19 +107,21 @@ describe("serum-gov", () => {
     );
 
     // Create alice SRM account
-    aliceSRMAccount = await createAssociatedTokenAccount(
+    await createAccount(
       connection,
       alice,
       SRM_MINT,
-      alice.publicKey
+      alice.publicKey,
+      aliceSRMAccount
     );
 
     // Create alice MSRM account
-    aliceMSRMAccount = await createAssociatedTokenAccount(
+    await createAccount(
       connection,
       alice,
       MSRM_MINT,
-      alice.publicKey
+      alice.publicKey,
+      aliceMSRMAccount
     );
 
     // Mint SRM to alice
@@ -125,13 +129,20 @@ describe("serum-gov", () => {
       connection,
       sbf,
       SRM_MINT,
-      aliceSRMAccount,
+      aliceSRMAccount.publicKey,
       sbf,
       BigInt(50000 * 1000000)
     );
 
     // Mint MSRM to alice
-    await mintTo(connection, sbf, MSRM_MINT, aliceMSRMAccount, sbf, 2);
+    await mintTo(
+      connection,
+      sbf,
+      MSRM_MINT,
+      aliceMSRMAccount.publicKey,
+      sbf,
+      2
+    );
 
     [srmVault] = findProgramAddressSync(
       [Buffer.from("vault"), SRM_MINT.toBuffer()],
@@ -171,11 +182,12 @@ describe("serum-gov", () => {
     const vaultMsrm = await connection.getTokenAccountBalance(msrmVault);
     expect(vaultMsrm.value.uiAmount).to.equal(0);
 
-    aliceGSRMAccount = await createAssociatedTokenAccount(
+    await createAccount(
       connection,
       alice,
       GSRM_MINT,
-      alice.publicKey
+      alice.publicKey,
+      aliceGSRMAccount
     );
   });
 
@@ -240,7 +252,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
         srmMint: SRM_MINT,
-        ownerSrmAccount: aliceSRMAccount,
+        ownerSrmAccount: aliceSRMAccount.publicKey,
         authority,
         srmVault,
         lockedAccount: aliceLockedAccount,
@@ -284,7 +296,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
         msrmMint: MSRM_MINT,
-        ownerMsrmAccount: aliceMSRMAccount,
+        ownerMsrmAccount: aliceMSRMAccount.publicKey,
         authority,
         msrmVault,
         lockedAccount: aliceLockedAccount,
@@ -333,7 +345,7 @@ describe("serum-gov", () => {
             claimTicket: claimTicket.publicKey,
             authority,
             gsrmMint: GSRM_MINT,
-            ownerGsrmAccount: aliceGSRMAccount,
+            ownerGsrmAccount: aliceGSRMAccount.publicKey,
             clock: SYSVAR_CLOCK_PUBKEY,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
@@ -344,7 +356,7 @@ describe("serum-gov", () => {
     );
 
     const aliceGsrmBalance = await connection.getTokenAccountBalance(
-      aliceGSRMAccount
+      aliceGSRMAccount.publicKey
     );
 
     expect(aliceGsrmBalance.value.uiAmount).to.equal(1_000_000 + 200);
@@ -379,7 +391,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         authority,
         gsrmMint: GSRM_MINT,
-        ownerGsrmAccount: aliceGSRMAccount,
+        ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
         redeemTicket: redeemTicket.publicKey,
         clock: SYSVAR_CLOCK_PUBKEY,
@@ -400,7 +412,7 @@ describe("serum-gov", () => {
     expect(aliceRedeemTicket.amount.toNumber()).to.equal(100_000_000);
 
     const aliceGSRMBalance = await connection.getTokenAccountBalance(
-      aliceGSRMAccount
+      aliceGSRMAccount.publicKey
     );
     expect(aliceGSRMBalance.value.uiAmount).to.equal(1_000_100);
   });
@@ -426,7 +438,7 @@ describe("serum-gov", () => {
           owner: alice.publicKey,
           authority,
           gsrmMint: GSRM_MINT,
-          ownerGsrmAccount: aliceGSRMAccount,
+          ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
           redeemTicket: redeemTicket.publicKey,
           clock: SYSVAR_CLOCK_PUBKEY,
@@ -462,7 +474,7 @@ describe("serum-gov", () => {
           owner: alice.publicKey,
           authority,
           gsrmMint: GSRM_MINT,
-          ownerGsrmAccount: aliceGSRMAccount,
+          ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
           redeemTicket: redeemTicket.publicKey,
           clock: SYSVAR_CLOCK_PUBKEY,
@@ -497,7 +509,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         authority,
         gsrmMint: GSRM_MINT,
-        ownerGsrmAccount: aliceGSRMAccount,
+        ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
         redeemTicket: redeemTicket.publicKey,
         clock: SYSVAR_CLOCK_PUBKEY,
@@ -518,7 +530,7 @@ describe("serum-gov", () => {
     expect(aliceRedeemTicket.amount.toNumber()).to.equal(1);
 
     const aliceGSRMBalance = await connection.getTokenAccountBalance(
-      aliceGSRMAccount
+      aliceGSRMAccount.publicKey
     );
     expect(aliceGSRMBalance.value.uiAmount).to.equal(100);
 
@@ -554,7 +566,7 @@ describe("serum-gov", () => {
         redeemTicket: redeemTicket.publicKey,
         srmMint: SRM_MINT,
         srmVault,
-        ownerSrmAccount: aliceSRMAccount,
+        ownerSrmAccount: aliceSRMAccount.publicKey,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -563,10 +575,10 @@ describe("serum-gov", () => {
       .rpc();
 
     const aliceSrmBalance = await connection.getTokenAccountBalance(
-      aliceSRMAccount
+      aliceSRMAccount.publicKey
     );
 
-    expect(aliceSrmBalance.value.uiAmount).to.equal(100);
+    expect(aliceSrmBalance.value.uiAmount).to.equal(49900);
 
     redeemTickets = await program.account.redeemTicket.all([
       {
@@ -599,7 +611,7 @@ describe("serum-gov", () => {
         redeemTicket: redeemTicket.publicKey,
         msrmMint: MSRM_MINT,
         msrmVault,
-        ownerMsrmAccount: aliceMSRMAccount,
+        ownerMsrmAccount: aliceMSRMAccount.publicKey,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -608,7 +620,7 @@ describe("serum-gov", () => {
       .rpc();
 
     const aliceMsrmBalance = await connection.getTokenAccountBalance(
-      aliceMSRMAccount
+      aliceMSRMAccount.publicKey
     );
 
     expect(aliceMsrmBalance.value.uiAmount).to.equal(2);
@@ -647,7 +659,7 @@ describe("serum-gov", () => {
         vestAccount: aliceVestAccount,
         claimTicket: claimTicket.publicKey,
         srmMint: SRM_MINT,
-        payerSrmAccount: aliceSRMAccount,
+        payerSrmAccount: aliceSRMAccount.publicKey,
         authority,
         srmVault,
         clock: SYSVAR_CLOCK_PUBKEY,
@@ -672,6 +684,8 @@ describe("serum-gov", () => {
     expect(aliceClaimTicket.gsrmAmount.toNumber()).to.equal(40000 * 1000000);
     expect(aliceClaimTicket.claimDelay.toNumber()).to.equal(2);
   });
+
+  // ------------------------------------------------------------
 
   // it("can burn vest gsrm", async () => {
   //   await sleep(2);

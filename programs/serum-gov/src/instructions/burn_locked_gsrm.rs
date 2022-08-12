@@ -30,8 +30,8 @@ pub struct BurnLockedGSRM<'info> {
 
     #[account(
         mut,
-        associated_token::mint = gsrm_mint,
-        associated_token::authority = owner
+        token::mint = gsrm_mint,
+        token::authority = owner
     )]
     pub owner_gsrm_account: Account<'info, TokenAccount>,
 

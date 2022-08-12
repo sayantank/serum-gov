@@ -29,8 +29,8 @@ pub struct DepositLockedMSRM<'info> {
 
     #[account(
         mut,
-        associated_token::mint = msrm_mint,
-        associated_token::authority = owner
+        token::mint = msrm_mint,
+        token::authority = owner
     )]
     pub owner_msrm_account: Account<'info, TokenAccount>,
 
@@ -43,6 +43,8 @@ pub struct DepositLockedMSRM<'info> {
 
     #[account(
         mut,
+        seeds = [b"vault", &msrm_mint.key().to_bytes()[..]],
+        bump,
         token::mint = msrm_mint,
         token::authority = authority,
     )]

@@ -47,8 +47,8 @@ pub struct DepositVestSRM<'info> {
 
     #[account(
         mut,
-        associated_token::mint = srm_mint,
-        associated_token::authority = payer
+        token::mint = srm_mint,
+        token::authority = payer
     )]
     pub payer_srm_account: Account<'info, TokenAccount>,
 
@@ -61,6 +61,8 @@ pub struct DepositVestSRM<'info> {
 
     #[account(
         mut,
+        seeds = [b"vault", &srm_mint.key().to_bytes()[..]],
+        bump,
         token::mint = srm_mint,
         token::authority = authority,
     )]

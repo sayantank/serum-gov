@@ -28,8 +28,8 @@ pub struct DepositLockedSRM<'info> {
 
     #[account(
         mut,
-        associated_token::mint = srm_mint,
-        associated_token::authority = owner
+        token::mint = srm_mint,
+        token::authority = owner
     )]
     pub owner_srm_account: Account<'info, TokenAccount>,
 
@@ -42,6 +42,8 @@ pub struct DepositLockedSRM<'info> {
 
     #[account(
         mut,
+        seeds = [b"vault", &srm_mint.key().to_bytes()[..]],
+        bump,
         token::mint = srm_mint,
         token::authority = authority,
     )]
