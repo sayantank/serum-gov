@@ -13,7 +13,7 @@ pub struct InitUser<'info> {
         payer = payer,
         seeds = [b"user", &owner.to_bytes()[..]],
         bump,
-        space = 8 + std::mem::size_of::<User>()
+        space = User::LEN
     )]
     pub user_account: Account<'info, User>,
 

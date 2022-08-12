@@ -8,6 +8,10 @@ pub struct User {
     pub vest_index: u64,
 }
 
+impl User {
+    pub const LEN: usize = 8 + 32 + 1 + 8 + 8;
+}
+
 #[account]
 pub struct LockedAccount {
     pub owner: Pubkey,
@@ -18,12 +22,20 @@ pub struct LockedAccount {
     pub gsrm_burned: u64,
 }
 
+impl LockedAccount {
+    pub const LEN: usize = 8 + 32 + 1 + 8 + 1 + 8 + 8;
+}
+
 #[account]
 pub struct ClaimTicket {
     pub owner: Pubkey,
     pub created_at: i64,
     pub claim_delay: i64,
     pub gsrm_amount: u64,
+}
+
+impl ClaimTicket {
+    pub const LEN: usize = 8 + 32 + 8 + 8 + 8;
 }
 
 #[account]
@@ -33,6 +45,10 @@ pub struct RedeemTicket {
     pub created_at: i64,
     pub redeem_delay: i64,
     pub amount: u64,
+}
+
+impl RedeemTicket {
+    pub const LEN: usize = 8 + 32 + 1 + 8 + 8 + 8;
 }
 
 #[account]
@@ -45,4 +61,8 @@ pub struct VestAccount {
     pub linear_vesting_period: i64,
     pub total_gsrm_amount: u64,
     pub gsrm_burned: u64,
+}
+
+impl VestAccount {
+    pub const LEN: usize = 8 + 32 + 1 + 8 + 8 + 8 + 8 + 8 + 8;
 }

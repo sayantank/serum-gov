@@ -55,14 +55,14 @@ pub struct DepositLockedMSRM<'info> {
         payer = owner,
         seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_le_bytes().as_ref()],
         bump,
-        space = 8 + std::mem::size_of::<LockedAccount>()
+        space = LockedAccount::LEN
     )]
     pub locked_account: Account<'info, LockedAccount>,
 
     #[account(
         init,
         payer = owner,
-        space =  8 + std::mem::size_of::<ClaimTicket>()
+        space = ClaimTicket::LEN
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
 

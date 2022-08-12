@@ -49,7 +49,7 @@ pub struct BurnVestGSRM<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + std::mem::size_of::<RedeemTicket>()
+        space = RedeemTicket::LEN
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
 

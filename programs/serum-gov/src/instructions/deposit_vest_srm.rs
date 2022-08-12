@@ -28,14 +28,14 @@ pub struct DepositVestSRM<'info> {
         payer = payer,
         seeds = [b"vest_account", &owner.key().to_bytes()[..], owner_user_account.vest_index.to_le_bytes().as_ref()],
         bump,
-        space = 8 + std::mem::size_of::<VestAccount>()
+        space = VestAccount::LEN
     )]
     pub vest_account: Account<'info, VestAccount>,
 
     #[account(
         init,
         payer = payer,
-        space = 8 + std::mem::size_of::<ClaimTicket>()
+        space = ClaimTicket::LEN
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
 
