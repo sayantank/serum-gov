@@ -20,8 +20,8 @@ pub mod serum_gov {
         init::handler(ctx)
     }
 
-    pub fn init_user(ctx: Context<InitUser>) -> Result<()> {
-        init_user::handler(ctx)
+    pub fn init_user(ctx: Context<InitUser>, owner: Pubkey) -> Result<()> {
+        init_user::handler(ctx, owner)
     }
 
     pub fn deposit_locked_srm(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {

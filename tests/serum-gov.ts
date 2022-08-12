@@ -205,10 +205,9 @@ describe("serum-gov", () => {
 
   it("can init user", async () => {
     const tx = await program.methods
-      .initUser()
+      .initUser(alice.publicKey)
       .accounts({
         payer: alice.publicKey,
-        owner: alice.publicKey,
         userAccount: aliceUserAccount,
         systemProgram: SystemProgram.programId,
       })
@@ -219,6 +218,7 @@ describe("serum-gov", () => {
 
     expect(aliceAccount.owner.toBase58()).to.equal(alice.publicKey.toBase58());
     expect(aliceAccount.lockIndex.toNumber()).to.equal(0);
+    expect(aliceAccount.vestIndex.toNumber()).to.equal(0);
   });
 
   it("can deposit srm", async () => {
