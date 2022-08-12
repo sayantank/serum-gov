@@ -23,6 +23,7 @@ pub struct RedeemSRM<'info> {
         constraint = redeem_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
         constraint = redeem_ticket.is_msrm == false @ SerumGovError::InvalidRedeemTicket,
         constraint = (redeem_ticket.created_at + redeem_ticket.redeem_delay) <= clock.unix_timestamp @ SerumGovError::TicketNotClaimable,
+        constraint = redeem_ticket.amount > 0 @ SerumGovError::TicketNotClaimable,
         close = owner
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
@@ -73,5 +74,9 @@ pub fn handler(ctx: Context<RedeemSRM>) -> Result<()> {
             .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
         ctx.accounts.redeem_ticket.amount,
     )?;
+
+    let redeem_ticket = &mut ctx.accounts.redeem_ticket;
+    redeem_ticket.amount = 0;
+
     Ok(())
 }

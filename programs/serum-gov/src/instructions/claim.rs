@@ -13,6 +13,7 @@ pub struct Claim<'info> {
         mut,
         constraint = claim_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
         constraint = clock.unix_timestamp >= (claim_ticket.created_at + claim_ticket.claim_delay) @ SerumGovError::TicketNotClaimable,
+        constraint = claim_ticket.gsrm_amount > 0 @ SerumGovError::TicketNotClaimable,
         close = owner
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
@@ -59,14 +60,15 @@ impl<'info> Claim<'info> {
 }
 
 pub fn handler(ctx: Context<Claim>) -> Result<()> {
-    let claim_ticket = &ctx.accounts.claim_ticket;
-
     token::mint_to(
         ctx.accounts
             .mint_gsrm()
             .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
-        claim_ticket.gsrm_amount,
+        ctx.accounts.claim_ticket.gsrm_amount,
     )?;
+
+    let claim_ticket = &mut ctx.accounts.claim_ticket;
+    claim_ticket.gsrm_amount = 0;
 
     Ok(())
 }
