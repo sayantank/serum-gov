@@ -87,7 +87,7 @@ pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> R
         return err!(SerumGovError::InvalidMSRMAmount);
     }
 
-    locked_account.gsrm_burned += amount;
+    locked_account.gsrm_burned = locked_account.gsrm_burned.checked_add(amount).unwrap();
 
     // Closing LockedAccount if all gSRM tokens were burned.
     if locked_account.gsrm_burned == locked_account.total_gsrm_amount {
