@@ -40,7 +40,7 @@ pub struct BurnVestGSRM<'info> {
 
     #[account(
         mut,
-        seeds = [b"vest_account", &owner.key().to_bytes()[..], vest_index.to_string().as_bytes()],
+        seeds = [b"vest_account", &owner.key().to_bytes()[..], vest_index.to_le_bytes().as_ref()],
         bump,
         constraint = clock.unix_timestamp >= (vest_account.created_at + vest_account.cliff_period) @ SerumGovError::TooEarlyToVest,
     )]

@@ -53,7 +53,7 @@ pub struct DepositLockedMSRM<'info> {
     #[account(
         init,
         payer = owner,
-        seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_string().as_bytes()],
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_le_bytes().as_ref()],
         bump,
         space = 8 + std::mem::size_of::<LockedAccount>()
     )]

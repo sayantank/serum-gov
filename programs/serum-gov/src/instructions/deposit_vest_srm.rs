@@ -26,7 +26,7 @@ pub struct DepositVestSRM<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [b"vest_account", &owner.key().to_bytes()[..], owner_user_account.vest_index.to_string().as_bytes()],
+        seeds = [b"vest_account", &owner.key().to_bytes()[..], owner_user_account.vest_index.to_le_bytes().as_ref()],
         bump,
         space = 8 + std::mem::size_of::<VestAccount>()
     )]

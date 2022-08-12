@@ -239,7 +239,7 @@ describe("serum-gov", () => {
       [
         Buffer.from("locked_account"),
         alice.publicKey.toBuffer(),
-        Buffer.from(aliceAccount.lockIndex.toString()),
+        aliceAccount.lockIndex.toBuffer("le", 8),
       ],
       program.programId
     );
@@ -283,7 +283,7 @@ describe("serum-gov", () => {
       [
         Buffer.from("locked_account"),
         alice.publicKey.toBuffer(),
-        Buffer.from(aliceAccount.lockIndex.toString()),
+        Buffer.from(aliceAccount.lockIndex.toBuffer("le", 8)),
       ],
       program.programId
     );
@@ -373,12 +373,12 @@ describe("serum-gov", () => {
   });
 
   it("can burn gsrm for locked srm", async () => {
-    const lockIndex = 0;
+    const lockIndex = new BN(0);
     const [aliceLockedAccount] = findProgramAddressSync(
       [
         Buffer.from("locked_account"),
         alice.publicKey.toBuffer(),
-        Buffer.from(lockIndex.toString()),
+        Buffer.from(lockIndex.toBuffer("le", 8)),
       ],
       program.programId
     );
@@ -491,12 +491,12 @@ describe("serum-gov", () => {
   });
 
   it("can burn gsrm for locked msrm", async () => {
-    const lockIndex = 1;
+    const lockIndex = new BN(1);
     const [aliceLockedAccount] = findProgramAddressSync(
       [
         Buffer.from("locked_account"),
         alice.publicKey.toBuffer(),
-        Buffer.from(lockIndex.toString()),
+        Buffer.from(lockIndex.toBuffer("le", 8)),
       ],
       program.programId
     );
@@ -643,7 +643,7 @@ describe("serum-gov", () => {
       [
         Buffer.from("vest_account"),
         alice.publicKey.toBuffer(),
-        Buffer.from(aliceAccount.vestIndex.toString()),
+        Buffer.from(aliceAccount.vestIndex.toBuffer("le", 8)),
       ],
       program.programId
     );

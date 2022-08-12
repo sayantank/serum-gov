@@ -37,7 +37,7 @@ pub struct BurnLockedGSRM<'info> {
 
     #[account(
         mut,
-        seeds = [b"locked_account", &owner.key().to_bytes()[..], lock_index.to_string().as_bytes()],
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], lock_index.to_le_bytes().as_ref()],
         bump,
     )]
     pub locked_account: Account<'info, LockedAccount>,
