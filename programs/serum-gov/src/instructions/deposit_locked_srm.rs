@@ -11,7 +11,10 @@ use crate::{
 #[derive(Accounts)]
 pub struct DepositLockedSRM<'info> {
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub payer: Signer<'info>,
+
+    /// CHECK: Owner account for which the vest is being created.
+    pub owner: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -29,9 +32,9 @@ pub struct DepositLockedSRM<'info> {
     #[account(
         mut,
         token::mint = srm_mint,
-        token::authority = owner
+        token::authority = payer
     )]
-    pub owner_srm_account: Account<'info, TokenAccount>,
+    pub payer_srm_account: Account<'info, TokenAccount>,
 
     /// CHECK: Just a PDA for vault authorities.
     #[account(
@@ -51,7 +54,7 @@ pub struct DepositLockedSRM<'info> {
 
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_le_bytes().as_ref()],
         bump,
         space = LockedAccount::LEN
@@ -60,7 +63,7 @@ pub struct DepositLockedSRM<'info> {
 
     #[account(
         init,
-        payer = owner,
+        payer = payer,
         space = ClaimTicket::LEN
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
@@ -73,9 +76,9 @@ pub struct DepositLockedSRM<'info> {
 impl<'info> DepositLockedSRM<'info> {
     fn into_deposit_srm_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
-            from: self.owner_srm_account.to_account_info().clone(),
+            from: self.payer_srm_account.to_account_info().clone(),
             to: self.srm_vault.to_account_info().clone(),
-            authority: self.owner.to_account_info().clone(),
+            authority: self.payer.to_account_info().clone(),
         };
         let cpi_program = self.token_program.to_account_info();
         CpiContext::new(cpi_program, cpi_accounts)

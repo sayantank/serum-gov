@@ -47,6 +47,8 @@ describe("serum-gov", () => {
 
   const alice = Keypair.generate();
 
+  let sbfSrmAccount: PublicKey;
+
   let aliceSRMAccount = Keypair.generate();
   let aliceMSRMAccount = Keypair.generate();
   let aliceGSRMAccount = Keypair.generate();
@@ -124,6 +126,9 @@ describe("serum-gov", () => {
       aliceMSRMAccount
     );
 
+    // Create sbf SRM account
+    await createAccount(connection, sbf, SRM_MINT, sbf.publicKey);
+
     // Mint SRM to alice
     await mintTo(
       connection,
@@ -142,6 +147,20 @@ describe("serum-gov", () => {
       aliceMSRMAccount.publicKey,
       sbf,
       2
+    );
+
+    sbfSrmAccount = await getAssociatedTokenAddress(
+      SRM_MINT,
+      sbf.publicKey,
+      true
+    );
+    await mintTo(
+      connection,
+      sbf,
+      SRM_MINT,
+      sbfSrmAccount,
+      sbf,
+      BigInt(50000 * 1000000)
     );
 
     [srmVault] = findProgramAddressSync(
@@ -249,10 +268,11 @@ describe("serum-gov", () => {
     await program.methods
       .depositLockedSrm(new BN(200_000_000))
       .accounts({
+        payer: sbf.publicKey,
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
         srmMint: SRM_MINT,
-        ownerSrmAccount: aliceSRMAccount.publicKey,
+        payerSrmAccount: sbfSrmAccount,
         authority,
         srmVault,
         lockedAccount: aliceLockedAccount,
@@ -261,7 +281,7 @@ describe("serum-gov", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([alice, claimTicket])
+      .signers([sbf, claimTicket])
       .rpc();
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
@@ -293,10 +313,11 @@ describe("serum-gov", () => {
     await program.methods
       .depositLockedMsrm(new BN(1))
       .accounts({
+        payer: alice.publicKey,
         owner: alice.publicKey,
         userAccount: aliceUserAccount,
         msrmMint: MSRM_MINT,
-        ownerMsrmAccount: aliceMSRMAccount.publicKey,
+        payerMsrmAccount: aliceMSRMAccount.publicKey,
         authority,
         msrmVault,
         lockedAccount: aliceLockedAccount,
@@ -325,7 +346,7 @@ describe("serum-gov", () => {
 
   it("can claim tickets", async () => {
     // const aliceAccount = await program.account.user.fetch(aliceUserAccount);
-    await sleep(2);
+    await sleep(3);
 
     let aliceClaimTickets = await program.account.claimTicket.all([
       {
@@ -578,7 +599,7 @@ describe("serum-gov", () => {
       aliceSRMAccount.publicKey
     );
 
-    expect(aliceSrmBalance.value.uiAmount).to.equal(49900);
+    expect(aliceSrmBalance.value.uiAmount).to.equal(50100);
 
     redeemTickets = await program.account.redeemTicket.all([
       {
