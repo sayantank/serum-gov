@@ -54,6 +54,7 @@ impl RedeemTicket {
 #[account]
 pub struct VestAccount {
     pub owner: Pubkey,
+    pub is_msrm: bool,
     pub bump: u8,
     pub vest_index: u64,
     pub created_at: i64,
@@ -64,5 +65,5 @@ pub struct VestAccount {
 }
 
 impl VestAccount {
-    pub const LEN: usize = 8 + 32 + 1 + 8 + 8 + 8 + 8 + 8 + 8;
+    pub const LEN: usize = 8 + 32 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 8;
 }

@@ -56,6 +56,10 @@ pub mod serum_gov {
         deposit_vest_srm::handler(ctx, amount)
     }
 
+    pub fn deposit_vest_msrm(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
+        deposit_vest_msrm::handler(ctx, amount)
+    }
+
     pub fn burn_vest_gsrm(ctx: Context<BurnVestGSRM>, vest_index: u64, amount: u64) -> Result<()> {
         burn_vest_gsrm::handler(ctx, vest_index, amount)
     }

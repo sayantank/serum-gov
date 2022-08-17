@@ -7,6 +7,7 @@ use crate::{
     config::parameters::REDEEM_DELAY,
     errors::SerumGovError,
     state::{RedeemTicket, VestAccount},
+    MSRM_MULTIPLIER,
 };
 
 #[derive(Accounts)]
@@ -105,20 +106,25 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
         return err!(SerumGovError::AlreadyRedeemed);
     }
 
-    // If user passed in amount < redeemable_amount, then redeem only that amount
-    // redeem_amount = min(redeemable_amount, amount)
-    let redeem_amount = cmp::min(redeemable_amount, amount);
+    // CHECK: If MSRM, then amount must be multiple for MSRM
+    if vest_account.is_msrm && (amount % MSRM_MULTIPLIER != 0) {
+        return err!(SerumGovError::InvalidMSRMAmount);
+    }
 
-    msg!("Redeeming {} gSRM", redeem_amount);
+    // If user passed in amount < redeemable_amount, then redeem only that amount
+    // gsrm_amount = min(redeemable_amount, amount)
+    let gsrm_amount = cmp::min(redeemable_amount, amount);
+
+    msg!("Redeeming {} gSRM", gsrm_amount);
     token::burn(
         ctx.accounts
             .into_burn_gsrm_context()
             .with_signer(&[&[b"authority", &[*ctx.bumps.get("authority").unwrap()]]]),
-        redeem_amount,
+        gsrm_amount,
     )?;
 
     let vest_account = &mut ctx.accounts.vest_account;
-    vest_account.gsrm_burned = vest_account.gsrm_burned.checked_add(redeem_amount).unwrap();
+    vest_account.gsrm_burned = vest_account.gsrm_burned.checked_add(gsrm_amount).unwrap();
 
     if vest_account.gsrm_burned == vest_account.total_gsrm_amount {
         vest_account.close(ctx.accounts.owner.to_account_info())?;
@@ -126,10 +132,14 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
 
     let redeem_ticket = &mut ctx.accounts.redeem_ticket;
     redeem_ticket.owner = ctx.accounts.owner.key();
-    redeem_ticket.is_msrm = false;
+    redeem_ticket.is_msrm = vest_account.is_msrm;
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
     redeem_ticket.redeem_delay = REDEEM_DELAY;
-    redeem_ticket.amount = redeem_amount;
+    redeem_ticket.amount = if vest_account.is_msrm {
+        amount.checked_div(MSRM_MULTIPLIER).unwrap()
+    } else {
+        amount
+    };
 
     Ok(())
 }

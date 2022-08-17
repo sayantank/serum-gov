@@ -48,6 +48,7 @@ describe("serum-gov", () => {
   const alice = Keypair.generate();
 
   let sbfSrmAccount: PublicKey;
+  let sbfMsrmAccount: PublicKey;
 
   let aliceSRMAccount = Keypair.generate();
   let aliceMSRMAccount = Keypair.generate();
@@ -129,6 +130,9 @@ describe("serum-gov", () => {
     // Create sbf SRM account
     await createAccount(connection, sbf, SRM_MINT, sbf.publicKey);
 
+    // Create sbf SRM account
+    await createAccount(connection, sbf, MSRM_MINT, sbf.publicKey);
+
     // Mint SRM to alice
     await mintTo(
       connection,
@@ -162,6 +166,13 @@ describe("serum-gov", () => {
       sbf,
       BigInt(50000 * 1000000)
     );
+
+    sbfMsrmAccount = await getAssociatedTokenAddress(
+      MSRM_MINT,
+      sbf.publicKey,
+      true
+    );
+    await mintTo(connection, sbf, MSRM_MINT, sbfMsrmAccount, sbf, BigInt(5));
 
     [srmVault] = findProgramAddressSync(
       [Buffer.from("vault"), SRM_MINT.toBuffer()],
@@ -694,6 +705,7 @@ describe("serum-gov", () => {
       aliceVestAccount
     );
     expect(vestAccount.owner.toBase58()).to.equal(alice.publicKey.toBase58());
+    expect(vestAccount.isMsrm).to.equal(false);
     expect(vestAccount.totalGsrmAmount.toNumber()).to.equal(40000 * 1000000);
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
@@ -706,10 +718,59 @@ describe("serum-gov", () => {
     expect(aliceClaimTicket.claimDelay.toNumber()).to.equal(2);
   });
 
-  // ------------------------------------------------------------
+  it("can deposit vest msrm", async () => {
+    const aliceAccount = await program.account.user.fetch(aliceUserAccount);
+    const [aliceVestAccount] = findProgramAddressSync(
+      [
+        Buffer.from("vest_account"),
+        alice.publicKey.toBuffer(),
+        Buffer.from(aliceAccount.vestIndex.toBuffer("le", 8)),
+      ],
+      program.programId
+    );
+
+    const claimTicket = Keypair.generate();
+
+    await program.methods
+      .depositVestMsrm(new BN(2))
+      .accounts({
+        payer: sbf.publicKey,
+        owner: alice.publicKey,
+        ownerUserAccount: aliceUserAccount,
+        vestAccount: aliceVestAccount,
+        claimTicket: claimTicket.publicKey,
+        msrmMint: MSRM_MINT,
+        payerMsrmAccount: sbfMsrmAccount,
+        authority,
+        msrmVault,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([sbf, claimTicket])
+      .rpc();
+
+    const vestAccount = await program.account.vestAccount.fetch(
+      aliceVestAccount
+    );
+    expect(vestAccount.owner.toBase58()).to.equal(alice.publicKey.toBase58());
+    expect(vestAccount.isMsrm).to.equal(true);
+    expect(vestAccount.totalGsrmAmount.toString()).to.equal("2000000000000");
+
+    const aliceClaimTicket = await program.account.claimTicket.fetch(
+      claimTicket.publicKey
+    );
+    expect(aliceClaimTicket.owner.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+    expect(aliceClaimTicket.gsrmAmount.toString()).to.equal("2000000000000");
+    expect(aliceClaimTicket.claimDelay.toNumber()).to.equal(2);
+  });
+
+  // =======================================================================
 
   // it("can burn vest gsrm", async () => {
-  //   await sleep(2);
+  //   await sleep(4);
   //   const [claimTicket] = await program.account.claimTicket.all([
   //     {
   //       memcmp: {
@@ -726,7 +787,7 @@ describe("serum-gov", () => {
   //       claimTicket: claimTicket.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
+  //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       clock: SYSVAR_CLOCK_PUBKEY,
   //       tokenProgram: TOKEN_PROGRAM_ID,
   //       systemProgram: SystemProgram.programId,
@@ -738,7 +799,7 @@ describe("serum-gov", () => {
   //     [
   //       Buffer.from("vest_account"),
   //       alice.publicKey.toBuffer(),
-  //       Buffer.from("0"),
+  //       new BN(0).toBuffer("le", 8),
   //     ],
   //     program.programId
   //   );
@@ -751,7 +812,7 @@ describe("serum-gov", () => {
   //       owner: alice.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
+  //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       vestAccount: aliceVestAccount,
   //       redeemTicket: redeemTicket.publicKey,
   //       clock: SYSVAR_CLOCK_PUBKEY,
@@ -770,7 +831,7 @@ describe("serum-gov", () => {
   //       owner: alice.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
-  //       ownerGsrmAccount: aliceGSRMAccount,
+  //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       vestAccount: aliceVestAccount,
   //       redeemTicket: redeemTicket2.publicKey,
   //       clock: SYSVAR_CLOCK_PUBKEY,
@@ -780,5 +841,48 @@ describe("serum-gov", () => {
   //     .signers([alice, redeemTicket2])
   //     .rpc();
   //   console.log(sig2);
+
+  //   console.log(`Redeemed Vest SRM`);
+  // });
+
+  // it("can burn vest gsrm for msrm", async () => {
+  //   await sleep(25);
+  //   const [aliceVestAccount] = findProgramAddressSync(
+  //     [
+  //       Buffer.from("vest_account"),
+  //       alice.publicKey.toBuffer(),
+  //       new BN(1).toBuffer("le", 8),
+  //     ],
+  //     program.programId
+  //   );
+
+  //   const redeemTicket = Keypair.generate();
+  //   const sig = await program.methods
+  //     .burnVestGsrm(new BN(1), new BN(1_000_000_000_000))
+  //     .accounts({
+  //       owner: alice.publicKey,
+  //       authority,
+  //       gsrmMint: GSRM_MINT,
+  //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
+  //       vestAccount: aliceVestAccount,
+  //       redeemTicket: redeemTicket.publicKey,
+  //       clock: SYSVAR_CLOCK_PUBKEY,
+  //       tokenProgram: TOKEN_PROGRAM_ID,
+  //       systemProgram: SystemProgram.programId,
+  //     })
+  //     .signers([alice, redeemTicket])
+  //     .rpc();
+
+  //   console.log(sig);
+
+  //   const redeemTicketData = await program.account.redeemTicket.fetch(
+  //     redeemTicket.publicKey
+  //   );
+
+  //   expect(redeemTicketData.owner.toBase58()).to.equal(
+  //     alice.publicKey.toBase58()
+  //   );
+  //   expect(redeemTicketData.isMsrm).to.equal(true);
+  //   expect(redeemTicketData.amount.toNumber()).to.equal(1);
   // });
 });
