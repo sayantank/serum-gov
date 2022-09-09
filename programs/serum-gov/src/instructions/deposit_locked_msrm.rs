@@ -22,7 +22,7 @@ pub struct DepositLockedMSRM<'info> {
         seeds = [b"user", &owner.key().to_bytes()[..]],
         bump,
     )]
-    pub user_account: Account<'info, User>,
+    pub owner_user_account: Account<'info, User>,
 
     #[cfg_attr(
         not(feature = "test-bpf"),
@@ -56,7 +56,7 @@ pub struct DepositLockedMSRM<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_le_bytes().as_ref()],
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], owner_user_account.lock_index.to_le_bytes().as_ref()],
         bump,
         space = LockedAccount::LEN
     )]
@@ -89,7 +89,7 @@ impl<'info> DepositLockedMSRM<'info> {
 pub fn handler(ctx: Context<DepositLockedMSRM>, amount: u64) -> Result<()> {
     token::transfer(ctx.accounts.into_deposit_msrm_context(), amount)?;
 
-    let user_account = &mut ctx.accounts.user_account;
+    let user_account = &mut ctx.accounts.owner_user_account;
 
     let gsrm_amount = amount.checked_mul(MSRM_MULTIPLIER).unwrap();
 

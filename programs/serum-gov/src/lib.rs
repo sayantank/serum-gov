@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("6titGTyVcdPo8GfHhJi3fhgLGkSHuhaEPiDpiUqK45v4");
+declare_id!("aw9bPsXoK7QoBNk6UVnxo7YukdaLsBXoKFapAJ95ETy");
 
 pub mod config;
 pub mod errors;
@@ -16,8 +16,8 @@ pub mod serum_gov {
 
     use super::*;
 
-    pub fn init(ctx: Context<Init>) -> Result<()> {
-        init::handler(ctx)
+    pub fn init(ctx: Context<Init>, name: String, symbol: String) -> Result<()> {
+        init::handler(ctx, name, symbol)
     }
 
     pub fn init_user(ctx: Context<InitUser>, owner: Pubkey) -> Result<()> {

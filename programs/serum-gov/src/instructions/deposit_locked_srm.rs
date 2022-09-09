@@ -21,7 +21,23 @@ pub struct DepositLockedSRM<'info> {
         seeds = [b"user", &owner.key().to_bytes()[..]],
         bump,
     )]
-    pub user_account: Account<'info, User>,
+    pub owner_user_account: Account<'info, User>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], owner_user_account.lock_index.to_le_bytes().as_ref()],
+        bump,
+        space = LockedAccount::LEN
+    )]
+    pub locked_account: Account<'info, LockedAccount>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = ClaimTicket::LEN
+    )]
+    pub claim_ticket: Account<'info, ClaimTicket>,
 
     #[cfg_attr(
         not(feature = "test-bpf"),
@@ -52,22 +68,6 @@ pub struct DepositLockedSRM<'info> {
     )]
     pub srm_vault: Account<'info, TokenAccount>,
 
-    #[account(
-        init,
-        payer = payer,
-        seeds = [b"locked_account", &owner.key().to_bytes()[..], user_account.lock_index.to_le_bytes().as_ref()],
-        bump,
-        space = LockedAccount::LEN
-    )]
-    pub locked_account: Account<'info, LockedAccount>,
-
-    #[account(
-        init,
-        payer = payer,
-        space = ClaimTicket::LEN
-    )]
-    pub claim_ticket: Account<'info, ClaimTicket>,
-
     pub clock: Sysvar<'info, Clock>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -88,7 +88,7 @@ impl<'info> DepositLockedSRM<'info> {
 pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
     token::transfer(ctx.accounts.into_deposit_srm_context(), amount)?;
 
-    let user_account = &mut ctx.accounts.user_account;
+    let user_account = &mut ctx.accounts.owner_user_account;
 
     let locked_account = &mut ctx.accounts.locked_account;
     locked_account.owner = ctx.accounts.owner.key();

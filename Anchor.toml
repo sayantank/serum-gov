@@ -2,9 +2,9 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-serum_gov = "6titGTyVcdPo8GfHhJi3fhgLGkSHuhaEPiDpiUqK45v4"
+serum_gov = "aw9bPsXoK7QoBNk6UVnxo7YukdaLsBXoKFapAJ95ETy"
 [programs.devnet]
-serum_gov = "6titGTyVcdPo8GfHhJi3fhgLGkSHuhaEPiDpiUqK45v4"
+serum_gov = "aw9bPsXoK7QoBNk6UVnxo7YukdaLsBXoKFapAJ95ETy"
 
 [registry]
 url = "https://api.apr.dev"
@@ -12,6 +12,12 @@ url = "https://api.apr.dev"
 [provider]
 cluster = "localnet"
 wallet = "/Users/sayantank/.config/solana/id.json"
+
+[test.validator]
+url = "https://api.mainnet-beta.solana.com"
+
+[[test.validator.clone]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s" 
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

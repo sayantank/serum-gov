@@ -10,13 +10,13 @@ import {
 } from "@solana/web3.js";
 import {
   createAccount,
-  createAssociatedTokenAccount,
   createMint,
   getAssociatedTokenAddress,
   getMint,
   mintTo,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { Metaplex, TokenMetadataProgram } from "@metaplex-foundation/js";
 import { SerumGov } from "../target/types/serum_gov";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 import { assert, expect } from "chai";
@@ -32,6 +32,8 @@ describe("serum-gov", () => {
 
   const { connection } = provider;
   const program = anchor.workspace.SerumGov as Program<SerumGov>;
+
+  const metaplex = new Metaplex(connection);
 
   let SRM_MINT: PublicKey;
   let MSRM_MINT: PublicKey;
@@ -66,6 +68,15 @@ describe("serum-gov", () => {
   const [aliceUserAccount] = findProgramAddressSync(
     [Buffer.from("user"), alice.publicKey.toBuffer()],
     program.programId
+  );
+
+  const [gsrmMetadata] = findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+      TokenMetadataProgram.publicKey.toBuffer(),
+      GSRM_MINT.toBuffer(),
+    ],
+    TokenMetadataProgram.publicKey
   );
 
   before(async () => {
@@ -186,11 +197,12 @@ describe("serum-gov", () => {
 
   it("can init", async () => {
     await program.methods
-      .init()
+      .init("Serum Governance", "gSRM")
       .accounts({
         payer: sbf.publicKey,
         authority,
         gsrmMint: GSRM_MINT,
+        gsrmMetadata,
         srmMint: SRM_MINT,
         srmVault,
         msrmMint: MSRM_MINT,
@@ -198,6 +210,7 @@ describe("serum-gov", () => {
         rent: SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
+        mplTokenMetadataProgram: TokenMetadataProgram.publicKey,
       })
       .signers([sbf])
       .rpc();
@@ -212,6 +225,14 @@ describe("serum-gov", () => {
     const vaultMsrm = await connection.getTokenAccountBalance(msrmVault);
     expect(vaultMsrm.value.uiAmount).to.equal(0);
 
+    const gsrmMetaplex = await metaplex
+      .nfts()
+      .findByMint({ mintAddress: GSRM_MINT })
+      .run();
+
+    expect(gsrmMetaplex.name).to.equal("Serum Governance");
+    expect(gsrmMetaplex.symbol).to.equal("gSRM");
+
     await createAccount(
       connection,
       alice,
@@ -224,11 +245,12 @@ describe("serum-gov", () => {
   it("cant init twice", async () => {
     try {
       await program.methods
-        .init()
+        .init("Serum Governance", "gSRM")
         .accounts({
           payer: sbf.publicKey,
           authority,
           gsrmMint: GSRM_MINT,
+          gsrmMetadata,
           srmMint: SRM_MINT,
           srmVault,
           msrmMint: MSRM_MINT,
@@ -236,6 +258,7 @@ describe("serum-gov", () => {
           rent: SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
+          mplTokenMetadataProgram: TokenMetadataProgram.publicKey,
         })
         .signers([sbf])
         .rpc();
@@ -281,7 +304,7 @@ describe("serum-gov", () => {
       .accounts({
         payer: sbf.publicKey,
         owner: alice.publicKey,
-        userAccount: aliceUserAccount,
+        ownerUserAccount: aliceUserAccount,
         srmMint: SRM_MINT,
         payerSrmAccount: sbfSrmAccount,
         authority,
@@ -326,7 +349,7 @@ describe("serum-gov", () => {
       .accounts({
         payer: alice.publicKey,
         owner: alice.publicKey,
-        userAccount: aliceUserAccount,
+        ownerUserAccount: aliceUserAccount,
         msrmMint: MSRM_MINT,
         payerMsrmAccount: aliceMSRMAccount.publicKey,
         authority,
