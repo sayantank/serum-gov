@@ -96,10 +96,11 @@ pub fn handler(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
     let gsrm_amount = amount.checked_mul(MSRM_MULTIPLIER).unwrap();
 
     let vest_account = &mut ctx.accounts.vest_account;
-    vest_account.owner = ctx.accounts.owner.key();
-    vest_account.is_msrm = true;
     vest_account.bump = *ctx.bumps.get("vest_account").unwrap();
+    vest_account.owner = ctx.accounts.owner.key();
     vest_account.vest_index = user_account.vest_index;
+    vest_account.redeem_index = 0;
+    vest_account.is_msrm = true;
     vest_account.created_at = ctx.accounts.clock.unix_timestamp;
     vest_account.cliff_period = CLIFF_PERIOD;
     vest_account.linear_vesting_period = LINEAR_VESTING_PERIOD;

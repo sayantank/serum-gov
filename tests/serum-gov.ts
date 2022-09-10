@@ -444,26 +444,33 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const redeemTicket = Keypair.generate();
+    const [redeemTicket] = findProgramAddressSync(
+      [
+        Buffer.from("redeem_ticket"),
+        aliceLockedAccount.toBuffer(),
+        new BN(0).toBuffer("le", 8),
+      ],
+      program.programId
+    );
 
     await program.methods
-      .burnLockedGsrm(new BN(lockIndex), new BN(100_000_000))
+      .burnLockedGsrm(new BN(100_000_000))
       .accounts({
         owner: alice.publicKey,
         authority,
         gsrmMint: GSRM_MINT,
         ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
-        redeemTicket: redeemTicket.publicKey,
+        redeemTicket: redeemTicket,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([alice, redeemTicket])
+      .signers([alice])
       .rpc();
 
     const aliceRedeemTicket = await program.account.redeemTicket.fetch(
-      redeemTicket.publicKey
+      redeemTicket
     );
     expect(aliceRedeemTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
@@ -490,23 +497,31 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const redeemTicket = Keypair.generate();
+    const [redeemTicket] = findProgramAddressSync(
+      [
+        Buffer.from("redeem_ticket"),
+        aliceLockedAccount.toBuffer(),
+        // Burnt 100 gSRM already, so redeem_index should be 1.
+        new BN(1).toBuffer("le", 8),
+      ],
+      program.programId
+    );
 
     try {
       await program.methods
-        .burnLockedGsrm(new BN(lockIndex), new BN(200_000_000))
+        .burnLockedGsrm(new BN(200_000_000))
         .accounts({
           owner: alice.publicKey,
           authority,
           gsrmMint: GSRM_MINT,
           ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
-          redeemTicket: redeemTicket.publicKey,
+          redeemTicket: redeemTicket,
           clock: SYSVAR_CLOCK_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
-        .signers([alice, redeemTicket])
+        .signers([alice])
         .rpc();
     } catch (e) {
       if (e instanceof AnchorError) {
@@ -526,23 +541,30 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const redeemTicket = Keypair.generate();
+    const [redeemTicket] = findProgramAddressSync(
+      [
+        Buffer.from("redeem_ticket"),
+        aliceLockedAccount.toBuffer(),
+        new BN(0).toBuffer("le", 8),
+      ],
+      program.programId
+    );
 
     try {
       await program.methods
-        .burnLockedGsrm(new BN(lockIndex), new BN(MSRM_MULTIPLIER - 1_000))
+        .burnLockedGsrm(new BN(MSRM_MULTIPLIER - 1_000))
         .accounts({
           owner: alice.publicKey,
           authority,
           gsrmMint: GSRM_MINT,
           ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
-          redeemTicket: redeemTicket.publicKey,
+          redeemTicket: redeemTicket,
           clock: SYSVAR_CLOCK_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
-        .signers([alice, redeemTicket])
+        .signers([alice])
         .rpc();
     } catch (e) {
       if (e instanceof AnchorError) {
@@ -562,26 +584,33 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const redeemTicket = Keypair.generate();
+    const [redeemTicket] = findProgramAddressSync(
+      [
+        Buffer.from("redeem_ticket"),
+        aliceLockedAccount.toBuffer(),
+        new BN(0).toBuffer("le", 8),
+      ],
+      program.programId
+    );
 
     await program.methods
-      .burnLockedGsrm(new BN(lockIndex), new BN(1 * MSRM_MULTIPLIER))
+      .burnLockedGsrm(new BN(1 * MSRM_MULTIPLIER))
       .accounts({
         owner: alice.publicKey,
         authority,
         gsrmMint: GSRM_MINT,
         ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
-        redeemTicket: redeemTicket.publicKey,
+        redeemTicket: redeemTicket,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([alice, redeemTicket])
+      .signers([alice])
       .rpc();
 
     const aliceRedeemTicket = await program.account.redeemTicket.fetch(
-      redeemTicket.publicKey
+      redeemTicket
     );
     expect(aliceRedeemTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
@@ -840,40 +869,57 @@ describe("serum-gov", () => {
   //   );
 
   //   await sleep(10);
-  //   const redeemTicket = Keypair.generate();
+
+  //   const [redeemTicket] = findProgramAddressSync(
+  //     [
+  //       Buffer.from("redeem_ticket"),
+  //       aliceVestAccount.toBuffer(),
+  //       new BN(0).toBuffer("le", 8),
+  //     ],
+  //     program.programId
+  //   );
+
   //   const sig = await program.methods
-  //     .burnVestGsrm(new BN(0), new BN(100_000_000_000))
+  //     .burnVestGsrm(new BN(100_000_000_000))
   //     .accounts({
   //       owner: alice.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
   //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       vestAccount: aliceVestAccount,
-  //       redeemTicket: redeemTicket.publicKey,
+  //       redeemTicket: redeemTicket,
   //       clock: SYSVAR_CLOCK_PUBKEY,
   //       tokenProgram: TOKEN_PROGRAM_ID,
   //       systemProgram: SystemProgram.programId,
   //     })
-  //     .signers([alice, redeemTicket])
+  //     .signers([alice])
   //     .rpc();
   //   console.log(sig);
 
   //   await sleep(10);
-  //   const redeemTicket2 = Keypair.generate();
+
+  //   const [redeemTicket2] = findProgramAddressSync(
+  //     [
+  //       Buffer.from("redeem_ticket"),
+  //       aliceVestAccount.toBuffer(),
+  //       new BN(1).toBuffer("le", 8),
+  //     ],
+  //     program.programId
+  //   );
   //   const sig2 = await program.methods
-  //     .burnVestGsrm(new BN(0), new BN(100_000_000_000))
+  //     .burnVestGsrm(new BN(100_000_000_000))
   //     .accounts({
   //       owner: alice.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
   //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       vestAccount: aliceVestAccount,
-  //       redeemTicket: redeemTicket2.publicKey,
+  //       redeemTicket: redeemTicket2,
   //       clock: SYSVAR_CLOCK_PUBKEY,
   //       tokenProgram: TOKEN_PROGRAM_ID,
   //       systemProgram: SystemProgram.programId,
   //     })
-  //     .signers([alice, redeemTicket2])
+  //     .signers([alice])
   //     .rpc();
   //   console.log(sig2);
 
@@ -891,27 +937,35 @@ describe("serum-gov", () => {
   //     program.programId
   //   );
 
-  //   const redeemTicket = Keypair.generate();
+  //   const [redeemTicket] = findProgramAddressSync(
+  //     [
+  //       Buffer.from("redeem_ticket"),
+  //       aliceVestAccount.toBuffer(),
+  //       new BN(0).toBuffer("le", 8),
+  //     ],
+  //     program.programId
+  //   );
+
   //   const sig = await program.methods
-  //     .burnVestGsrm(new BN(1), new BN(1_000_000_000_000))
+  //     .burnVestGsrm(new BN(1_000_000_000_000))
   //     .accounts({
   //       owner: alice.publicKey,
   //       authority,
   //       gsrmMint: GSRM_MINT,
   //       ownerGsrmAccount: aliceGSRMAccount.publicKey,
   //       vestAccount: aliceVestAccount,
-  //       redeemTicket: redeemTicket.publicKey,
+  //       redeemTicket: redeemTicket,
   //       clock: SYSVAR_CLOCK_PUBKEY,
   //       tokenProgram: TOKEN_PROGRAM_ID,
   //       systemProgram: SystemProgram.programId,
   //     })
-  //     .signers([alice, redeemTicket])
-  //     .rpc();
+  //     .signers([alice])
+  //     .rpc({ skipPreflight: true });
 
   //   console.log(sig);
 
   //   const redeemTicketData = await program.account.redeemTicket.fetch(
-  //     redeemTicket.publicKey
+  //     redeemTicket
   //   );
 
   //   expect(redeemTicketData.owner.toBase58()).to.equal(

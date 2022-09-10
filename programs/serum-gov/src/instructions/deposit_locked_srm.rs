@@ -94,11 +94,13 @@ pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
 
     let locked_account = &mut ctx.accounts.locked_account;
     locked_account.owner = ctx.accounts.owner.key();
+    locked_account.bump = *ctx.bumps.get("locked_account").unwrap();
     locked_account.lock_index = user_account.lock_index;
+    locked_account.redeem_index = 0;
     locked_account.is_msrm = false;
+    locked_account.created_at = ctx.accounts.clock.unix_timestamp;
     locked_account.total_gsrm_amount = amount;
     locked_account.gsrm_burned = 0;
-    locked_account.bump = *ctx.bumps.get("locked_account").unwrap();
 
     let claim_ticket = &mut ctx.accounts.claim_ticket;
     claim_ticket.owner = ctx.accounts.owner.key();

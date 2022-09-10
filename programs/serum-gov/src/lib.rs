@@ -36,12 +36,8 @@ pub mod serum_gov {
         claim::handler(ctx)
     }
 
-    pub fn burn_locked_gsrm(
-        ctx: Context<BurnLockedGSRM>,
-        lock_index: u64,
-        amount: u64,
-    ) -> Result<()> {
-        burn_locked_gsrm::handler(ctx, lock_index, amount)
+    pub fn burn_locked_gsrm(ctx: Context<BurnLockedGSRM>, amount: u64) -> Result<()> {
+        burn_locked_gsrm::handler(ctx, amount)
     }
 
     pub fn redeem_srm(ctx: Context<RedeemSRM>) -> Result<()> {
@@ -60,7 +56,7 @@ pub mod serum_gov {
         deposit_vest_msrm::handler(ctx, amount)
     }
 
-    pub fn burn_vest_gsrm(ctx: Context<BurnVestGSRM>, vest_index: u64, amount: u64) -> Result<()> {
-        burn_vest_gsrm::handler(ctx, vest_index, amount)
+    pub fn burn_vest_gsrm(ctx: Context<BurnVestGSRM>, amount: u64) -> Result<()> {
+        burn_vest_gsrm::handler(ctx, amount)
     }
 }

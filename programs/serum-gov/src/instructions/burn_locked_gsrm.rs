@@ -7,7 +7,6 @@ use crate::state::{LockedAccount, RedeemTicket};
 use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
-#[instruction(lock_index: u64)]
 pub struct BurnLockedGSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -37,7 +36,7 @@ pub struct BurnLockedGSRM<'info> {
 
     #[account(
         mut,
-        seeds = [b"locked_account", &owner.key().to_bytes()[..], lock_index.to_le_bytes().as_ref()],
+        seeds = [b"locked_account", &owner.key().to_bytes()[..], locked_account.lock_index.to_le_bytes().as_ref()],
         bump,
     )]
     pub locked_account: Account<'info, LockedAccount>,
@@ -45,6 +44,8 @@ pub struct BurnLockedGSRM<'info> {
     #[account(
         init,
         payer = owner,
+        seeds = [b"redeem_ticket", &locked_account.key().to_bytes()[..], locked_account.redeem_index.to_le_bytes().as_ref()],
+        bump,
         space = RedeemTicket::LEN
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
@@ -66,7 +67,7 @@ impl<'info> BurnLockedGSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<BurnLockedGSRM>, amount: u64) -> Result<()> {
     // Doesn't matter if placed here, or below since txs are atomic.
     token::burn(
         ctx.accounts
@@ -104,10 +105,15 @@ pub fn handler(ctx: Context<BurnLockedGSRM>, _lock_index: u64, amount: u64) -> R
 
     let redeem_ticket = &mut ctx.accounts.redeem_ticket;
     redeem_ticket.owner = ctx.accounts.owner.key();
+    redeem_ticket.deposit_account = locked_account.key();
+    redeem_ticket.redeem_index = locked_account.redeem_index;
+    redeem_ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
     redeem_ticket.is_msrm = locked_account.is_msrm; // This decides whether amount is SRM or gSRM.
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
     redeem_ticket.redeem_delay = REDEEM_DELAY;
     redeem_ticket.amount = redeem_amount;
+
+    locked_account.redeem_index = locked_account.redeem_index.checked_add(1).unwrap();
 
     Ok(())
 }

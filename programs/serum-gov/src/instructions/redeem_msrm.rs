@@ -20,6 +20,8 @@ pub struct RedeemMSRM<'info> {
 
     #[account(
         mut,
+        seeds = [b"redeem_ticket", &redeem_ticket.deposit_account.to_bytes()[..], redeem_ticket.redeem_index.to_le_bytes().as_ref()],
+        bump,
         constraint = redeem_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
         constraint = redeem_ticket.is_msrm == true @ SerumGovError::InvalidRedeemTicket,
         constraint = (redeem_ticket.created_at + redeem_ticket.redeem_delay) <= clock.unix_timestamp @ SerumGovError::TicketNotClaimable,

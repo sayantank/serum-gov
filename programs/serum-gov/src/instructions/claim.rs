@@ -11,6 +11,8 @@ pub struct Claim<'info> {
 
     #[account(
         mut,
+        seeds = [b"claim_ticket", &claim_ticket.deposit_account.to_bytes()[..]],
+        bump,
         constraint = claim_ticket.owner.key() == owner.key() @ SerumGovError::InvalidTicketOwner,
         constraint = clock.unix_timestamp >= (claim_ticket.created_at + claim_ticket.claim_delay) @ SerumGovError::TicketNotClaimable,
         constraint = claim_ticket.gsrm_amount > 0 @ SerumGovError::TicketNotClaimable,

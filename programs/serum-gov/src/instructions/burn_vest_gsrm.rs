@@ -11,7 +11,6 @@ use crate::{
 };
 
 #[derive(Accounts)]
-#[instruction(vest_index: u64)]
 pub struct BurnVestGSRM<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -41,7 +40,7 @@ pub struct BurnVestGSRM<'info> {
 
     #[account(
         mut,
-        seeds = [b"vest_account", &owner.key().to_bytes()[..], vest_index.to_le_bytes().as_ref()],
+        seeds = [b"vest_account", &owner.key().to_bytes()[..], vest_account.vest_index.to_le_bytes().as_ref()],
         bump,
         constraint = clock.unix_timestamp >= (vest_account.created_at + vest_account.cliff_period) @ SerumGovError::TooEarlyToVest,
     )]
@@ -50,6 +49,8 @@ pub struct BurnVestGSRM<'info> {
     #[account(
         init,
         payer = owner,
+        seeds = [b"redeem_ticket", &vest_account.key().to_bytes()[..], vest_account.redeem_index.to_le_bytes().as_ref()],
+        bump,
         space = RedeemTicket::LEN
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
@@ -71,7 +72,7 @@ impl<'info> BurnVestGSRM<'info> {
     }
 }
 
-pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<BurnVestGSRM>, amount: u64) -> Result<()> {
     let vest_account = &ctx.accounts.vest_account;
 
     let current_timestamp = ctx.accounts.clock.unix_timestamp;
@@ -132,6 +133,9 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
 
     let redeem_ticket = &mut ctx.accounts.redeem_ticket;
     redeem_ticket.owner = ctx.accounts.owner.key();
+    redeem_ticket.deposit_account = vest_account.key();
+    redeem_ticket.redeem_index = vest_account.redeem_index;
+    redeem_ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
     redeem_ticket.is_msrm = vest_account.is_msrm;
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
     redeem_ticket.redeem_delay = REDEEM_DELAY;
@@ -140,6 +144,8 @@ pub fn handler(ctx: Context<BurnVestGSRM>, _vest_index: u64, amount: u64) -> Res
     } else {
         amount
     };
+
+    vest_account.redeem_index = vest_account.redeem_index.checked_add(1).unwrap();
 
     Ok(())
 }
