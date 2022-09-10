@@ -297,7 +297,10 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const claimTicket = Keypair.generate();
+    const [claimTicket] = findProgramAddressSync(
+      [Buffer.from("claim_ticket"), aliceLockedAccount.toBuffer()],
+      program.programId
+    );
 
     await program.methods
       .depositLockedSrm(new BN(200_000_000))
@@ -310,16 +313,16 @@ describe("serum-gov", () => {
         authority,
         srmVault,
         lockedAccount: aliceLockedAccount,
-        claimTicket: claimTicket.publicKey,
+        claimTicket: claimTicket,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([sbf, claimTicket])
+      .signers([sbf])
       .rpc();
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
-      claimTicket.publicKey
+      claimTicket
     );
     expect(aliceClaimTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
@@ -342,7 +345,10 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    let claimTicket = Keypair.generate();
+    const [claimTicket] = findProgramAddressSync(
+      [Buffer.from("claim_ticket"), aliceLockedAccount.toBuffer()],
+      program.programId
+    );
 
     await program.methods
       .depositLockedMsrm(new BN(1))
@@ -355,16 +361,16 @@ describe("serum-gov", () => {
         authority,
         msrmVault,
         lockedAccount: aliceLockedAccount,
-        claimTicket: claimTicket.publicKey,
+        claimTicket: claimTicket,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([alice, claimTicket])
+      .signers([alice])
       .rpc();
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
-      claimTicket.publicKey
+      claimTicket
     );
     expect(aliceClaimTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
@@ -703,7 +709,10 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const claimTicket = Keypair.generate();
+    const [claimTicket] = findProgramAddressSync(
+      [Buffer.from("claim_ticket"), aliceVestAccount.toBuffer()],
+      program.programId
+    );
 
     await program.methods
       .depositVestSrm(new BN(40000 * 1000000))
@@ -712,7 +721,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         ownerUserAccount: aliceUserAccount,
         vestAccount: aliceVestAccount,
-        claimTicket: claimTicket.publicKey,
+        claimTicket: claimTicket,
         srmMint: SRM_MINT,
         payerSrmAccount: aliceSRMAccount.publicKey,
         authority,
@@ -721,7 +730,7 @@ describe("serum-gov", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([alice, claimTicket])
+      .signers([alice])
       .rpc();
 
     const vestAccount = await program.account.vestAccount.fetch(
@@ -732,7 +741,7 @@ describe("serum-gov", () => {
     expect(vestAccount.totalGsrmAmount.toNumber()).to.equal(40000 * 1000000);
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
-      claimTicket.publicKey
+      claimTicket
     );
     expect(aliceClaimTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()
@@ -752,7 +761,10 @@ describe("serum-gov", () => {
       program.programId
     );
 
-    const claimTicket = Keypair.generate();
+    const [claimTicket] = findProgramAddressSync(
+      [Buffer.from("claim_ticket"), aliceVestAccount.toBuffer()],
+      program.programId
+    );
 
     await program.methods
       .depositVestMsrm(new BN(2))
@@ -761,7 +773,7 @@ describe("serum-gov", () => {
         owner: alice.publicKey,
         ownerUserAccount: aliceUserAccount,
         vestAccount: aliceVestAccount,
-        claimTicket: claimTicket.publicKey,
+        claimTicket: claimTicket,
         msrmMint: MSRM_MINT,
         payerMsrmAccount: sbfMsrmAccount,
         authority,
@@ -770,7 +782,7 @@ describe("serum-gov", () => {
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
-      .signers([sbf, claimTicket])
+      .signers([sbf])
       .rpc();
 
     const vestAccount = await program.account.vestAccount.fetch(
@@ -781,7 +793,7 @@ describe("serum-gov", () => {
     expect(vestAccount.totalGsrmAmount.toString()).to.equal("2000000000000");
 
     const aliceClaimTicket = await program.account.claimTicket.fetch(
-      claimTicket.publicKey
+      claimTicket
     );
     expect(aliceClaimTicket.owner.toBase58()).to.equal(
       alice.publicKey.toBase58()

@@ -29,13 +29,15 @@ impl LockedAccount {
 #[account]
 pub struct ClaimTicket {
     pub owner: Pubkey,
+    pub deposit_account: Pubkey,
+    pub bump: u8,
     pub created_at: i64,
     pub claim_delay: i64,
     pub gsrm_amount: u64,
 }
 
 impl ClaimTicket {
-    pub const LEN: usize = 8 + 32 + 8 + 8 + 8;
+    pub const LEN: usize = 8 + 32 + 32 + 1 + 8 + 8 + 8;
 }
 
 #[account]

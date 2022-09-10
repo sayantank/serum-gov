@@ -36,6 +36,8 @@ pub struct DepositVestMSRM<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [b"claim_ticket", &vest_account.key().to_bytes()[..]],
+        bump,
         space = ClaimTicket::LEN
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
@@ -106,6 +108,8 @@ pub fn handler(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
 
     let claim_ticket = &mut ctx.accounts.claim_ticket;
     claim_ticket.owner = ctx.accounts.owner.key();
+    claim_ticket.deposit_account = vest_account.key();
+    claim_ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
     claim_ticket.created_at = ctx.accounts.clock.unix_timestamp;
     claim_ticket.claim_delay = CLAIM_DELAY;
     claim_ticket.gsrm_amount = gsrm_amount;
