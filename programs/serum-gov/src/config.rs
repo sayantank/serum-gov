@@ -6,16 +6,16 @@ pub mod mints {
 
 #[cfg(not(feature = "test-bpf"))]
 pub mod parameters {
-    pub const CLAIM_DELAY: i64 = 1000;
-    pub const REDEEM_DELAY: i64 = 1000;
-    pub const CLIFF_PERIOD: i64 = 1000;
+    pub const CLAIM_DELAY: i64 = 60 * 60 * 24 * 7;
+    pub const REDEEM_DELAY: i64 = 60 * 60 * 24 * 7;
+    pub const CLIFF_PERIOD: i64 = 60;
     pub const LINEAR_VESTING_PERIOD: i64 = 1000;
 }
 
 #[cfg(feature = "test-bpf")]
 pub mod parameters {
-    pub const CLAIM_DELAY: i64 = 2;
-    pub const REDEEM_DELAY: i64 = 2;
-    pub const CLIFF_PERIOD: i64 = 5;
-    pub const LINEAR_VESTING_PERIOD: i64 = 30;
+    pub const CLAIM_DELAY: i64 = 60 * 2;
+    pub const REDEEM_DELAY: i64 = 60 * 2;
+    pub const CLIFF_PERIOD: i64 = 60 * 5;
+    pub const LINEAR_VESTING_PERIOD: i64 = 60 * 60;
 }
