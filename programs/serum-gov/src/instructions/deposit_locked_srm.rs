@@ -88,6 +88,9 @@ impl<'info> DepositLockedSRM<'info> {
 }
 
 pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
+    if amount <= 0 {
+        return Err(ProgramError::InvalidInstructionData.into());
+    }
     token::transfer(ctx.accounts.into_deposit_srm_context(), amount)?;
 
     let user_account = &mut ctx.accounts.owner_user_account;

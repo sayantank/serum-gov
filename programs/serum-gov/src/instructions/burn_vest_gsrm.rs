@@ -73,6 +73,10 @@ impl<'info> BurnVestGSRM<'info> {
 }
 
 pub fn handler(ctx: Context<BurnVestGSRM>, amount: u64) -> Result<()> {
+    if amount <= 0 {
+        return Err(ProgramError::InvalidInstructionData.into());
+    }
+
     let vest_account = &ctx.accounts.vest_account;
 
     let current_timestamp = ctx.accounts.clock.unix_timestamp;

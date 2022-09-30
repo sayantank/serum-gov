@@ -1,10 +1,14 @@
+anchor_version = "0.25.0"
+
 [features]
 seeds = false
 skip-lint = false
+
 [programs.localnet]
-serum_gov = "G1aFYDgwp7zYcP9SyYskTP4d2C5WqKdweT3ajusiuUjJ"
+serum_gov = "3Xqru7FkP2BACJgxtPTP34HpbQkSkgjFPViuwTv98Lg3"
+
 [programs.devnet]
-serum_gov = "G1aFYDgwp7zYcP9SyYskTP4d2C5WqKdweT3ajusiuUjJ"
+serum_gov = "3Xqru7FkP2BACJgxtPTP34HpbQkSkgjFPViuwTv98Lg3"
 
 [registry]
 url = "https://api.apr.dev"

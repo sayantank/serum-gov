@@ -68,6 +68,10 @@ impl<'info> BurnLockedGSRM<'info> {
 }
 
 pub fn handler(ctx: Context<BurnLockedGSRM>, amount: u64) -> Result<()> {
+    if amount <= 0 {
+        return Err(ProgramError::InvalidInstructionData.into());
+    }
+
     // Doesn't matter if placed here, or below since txs are atomic.
     token::burn(
         ctx.accounts

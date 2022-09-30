@@ -34,15 +34,15 @@ The owner of the VestAccount can then redeem SRM tokens using the claimed gSRM t
 
 ## Devnet Addresses:
 
-- PROGRAM_ID: `G1aFYDgwp7zYcP9SyYskTP4d2C5WqKdweT3ajusiuUjJ`
+- PROGRAM_ID: `3Xqru7FkP2BACJgxtPTP34HpbQkSkgjFPViuwTv98Lg3`
 
-- GSRM_MINT: `EhsxZMNG3kdonZVT5nnEd1LcBMscGySQ551nhNyzSRar`
-- SRM_MINT: `6LDZM4GLSC6rA4hbt6XZVqfY9KQGWXfrSjsYyoDTFm8B`
-- MSRM_MINT: `9Ag8AMqnjgc5qjTFiwafEpkZVRjRhqdGhHev4y1Dn2aS`
+- GSRM_MINT: `5Lbk1UwafVehLtb6uLZbBxdmKNsoJ8qK3huB3PPNjFBH`
+- SRM_MINT: `9C6YDzG8EjttWMsH7cyDp3aRJG5j4Uti5SMV46f53GYP`
+- MSRM_MINT: `4yLDuw3yYC3ncVzthLesTb6ALJsdTzLabcESo3Kvup79`
 
-- Init signature: `2wwRKp7S2dJAjqGNvkQiE5d3njn3dDfT33sZ7MyRMWAThZi8FZexLzcQfPWzDtC19f8twEuepxcEo3bQYq3xfimt`
+- Init signature: `3nwLXHU2W6qCp2yTtxoZbWTeXeYtpQKLSTs8xPBn1Leht7ykashMqFvfhzZJ9FFT7G9QJGUy8oX3hgrjHU34YTwQ`
 
-- Test Realm: `Cs9n5iAck9jXSz3R9pvU2m7DkNeL4TzB4VaoAkfAP4wG`
+- Test Realm: `DzGbJkmu2eFQdnqCjhkV3sC7GLAG9Kdm4SoP485Kbzcp`
 
 - REALM_1: `C2E8coHoNGEb1veDmWAH14xdKfzdf3BenMnKSfucUAy1`
 - DAO_1_MINT: `23Shpjj1q7vsn6P2JxmB1h8SdHJpLDqDMHaR4DUtuqMW`
