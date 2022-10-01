@@ -1,9 +1,8 @@
 use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
-use crate::config::parameters::REDEEM_DELAY;
 use crate::errors::*;
-use crate::state::{LockedAccount, RedeemTicket};
+use crate::state::{Config, LockedAccount, RedeemTicket};
 use crate::MSRM_MULTIPLIER;
 
 #[derive(Accounts)]
@@ -17,6 +16,12 @@ pub struct BurnLockedGSRM<'info> {
         bump,
     )]
     pub authority: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, Config>,
 
     #[account(
         mut,
@@ -114,7 +119,7 @@ pub fn handler(ctx: Context<BurnLockedGSRM>, amount: u64) -> Result<()> {
     redeem_ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
     redeem_ticket.is_msrm = locked_account.is_msrm; // This decides whether amount is SRM or gSRM.
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    redeem_ticket.redeem_delay = REDEEM_DELAY;
+    redeem_ticket.redeem_delay = ctx.accounts.config.redeem_delay;
     redeem_ticket.amount = redeem_amount;
 
     locked_account.redeem_index = locked_account.redeem_index.checked_add(1).unwrap();

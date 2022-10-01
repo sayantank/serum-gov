@@ -32,15 +32,25 @@ The owner of the VestAccount can then redeem SRM tokens using the claimed gSRM t
 1. Update `VestAccount` according to the amount of gSRM burned.
 2. Issue a `RedeemTicket`, which can be used to receive the SRM tokens, after `REDEEM_DELAY` seconds have passed since creation, using the `redeem_srm` instruction. The amount of SRM tokens that can be redeemed is calculated using the `CLIFF_PERIOD`, `LINEAR_VEST_PERIOD`, `clock.unix_timestamp` and `VestAccount.gsrm_burned`.
 
-## Devnet Addresses:
+## Addresses:
 
-- PROGRAM_ID: `3Xqru7FkP2BACJgxtPTP34HpbQkSkgjFPViuwTv98Lg3`
+### Test Instance
 
-- GSRM_MINT: `5Lbk1UwafVehLtb6uLZbBxdmKNsoJ8qK3huB3PPNjFBH`
-- SRM_MINT: `9C6YDzG8EjttWMsH7cyDp3aRJG5j4Uti5SMV46f53GYP`
-- MSRM_MINT: `4yLDuw3yYC3ncVzthLesTb6ALJsdTzLabcESo3Kvup79`
+These should be used for testing on mainnet-beta and devnet.
 
-- Init signature: `3nwLXHU2W6qCp2yTtxoZbWTeXeYtpQKLSTs8xPBn1Leht7ykashMqFvfhzZJ9FFT7G9QJGUy8oX3hgrjHU34YTwQ`
+- Program ID: `RE3xgnnxDjhXoPMqEzeKLj8ThrdXwdDa168GCEGoY6Y`
+- gSRM: `6XoQibnhohhgGjYmyKiYGZFFdB3CbfbtRitf3s1XwGCJ`
+- SRM: `2xKASju8WCUK6zC54TP4h6WhHdqdcWMNoFpqAdvXvHV6`
+- MSRM: `BoFBTKtdMXC4YALXtNV5tmw1xNWtjxTrR17PvZGmKhmP`
+- Init signature: `2weqcbTiQTmM76PR1x6DUa4xJbNRGe6iKd6fFyRdqKJnXzaDvGvrJPaCZByp6itvJMC9mN25nTTx1fnhT7rJq3qk`
+
+### Main Instance
+
+- Program ID:
+- gSRM:
+- SRM:
+- MSRM:
+- Init Signature:
 
 - Test Realm: `DzGbJkmu2eFQdnqCjhkV3sC7GLAG9Kdm4SoP485Kbzcp`
 

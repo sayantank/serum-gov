@@ -1,11 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-#[cfg(not(feature = "test-bpf"))]
-use crate::config::mints::MSRM;
 use crate::{
-    config::parameters::{CLAIM_DELAY, CLIFF_PERIOD, LINEAR_VESTING_PERIOD},
-    state::{ClaimTicket, User, VestAccount},
+    state::{ClaimTicket, Config, User, VestAccount},
     MSRM_MULTIPLIER,
 };
 
@@ -16,6 +13,12 @@ pub struct DepositVestMSRM<'info> {
 
     /// CHECK: Owner account for which the vest is being created.
     pub owner: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"config"],
+        bump
+    )]
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         mut,
@@ -42,10 +45,7 @@ pub struct DepositVestMSRM<'info> {
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
 
-    #[cfg_attr(
-        not(feature = "test-bpf"),
-        account(address = MSRM),
-    )]
+    #[account(address = config.msrm_mint)]
     pub msrm_mint: Account<'info, Mint>,
 
     #[account(
@@ -95,6 +95,7 @@ pub fn handler(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
 
     token::transfer(ctx.accounts.into_deposit_msrm_context(), amount)?;
 
+    let config = &ctx.accounts.config;
     let user_account = &mut ctx.accounts.owner_user_account;
 
     let gsrm_amount = amount.checked_mul(MSRM_MULTIPLIER).unwrap();
@@ -106,8 +107,8 @@ pub fn handler(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
     vest_account.redeem_index = 0;
     vest_account.is_msrm = true;
     vest_account.created_at = ctx.accounts.clock.unix_timestamp;
-    vest_account.cliff_period = CLIFF_PERIOD;
-    vest_account.linear_vesting_period = LINEAR_VESTING_PERIOD;
+    vest_account.cliff_period = config.cliff_period;
+    vest_account.linear_vesting_period = config.linear_vesting_period;
     vest_account.total_gsrm_amount = gsrm_amount;
     vest_account.gsrm_burned = 0;
 
@@ -116,7 +117,7 @@ pub fn handler(ctx: Context<DepositVestMSRM>, amount: u64) -> Result<()> {
     claim_ticket.deposit_account = vest_account.key();
     claim_ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
     claim_ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    claim_ticket.claim_delay = CLAIM_DELAY;
+    claim_ticket.claim_delay = config.claim_delay;
     claim_ticket.gsrm_amount = gsrm_amount;
 
     user_account.vest_index = user_account.vest_index.checked_add(1).unwrap();

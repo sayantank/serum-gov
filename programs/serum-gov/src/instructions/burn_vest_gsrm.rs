@@ -4,9 +4,8 @@ use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
 use crate::{
-    config::parameters::REDEEM_DELAY,
     errors::SerumGovError,
-    state::{RedeemTicket, VestAccount},
+    state::{Config, RedeemTicket, VestAccount},
     MSRM_MULTIPLIER,
 };
 
@@ -21,6 +20,12 @@ pub struct BurnVestGSRM<'info> {
         bump
     )]
     pub authority: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"config"],
+        bump
+    )]
+    pub config: Account<'info, Config>,
 
     #[account(
         mut,
@@ -142,7 +147,7 @@ pub fn handler(ctx: Context<BurnVestGSRM>, amount: u64) -> Result<()> {
     redeem_ticket.bump = *ctx.bumps.get("redeem_ticket").unwrap();
     redeem_ticket.is_msrm = vest_account.is_msrm;
     redeem_ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    redeem_ticket.redeem_delay = REDEEM_DELAY;
+    redeem_ticket.redeem_delay = ctx.accounts.config.redeem_delay;
     redeem_ticket.amount = if vest_account.is_msrm {
         amount.checked_div(MSRM_MULTIPLIER).unwrap()
     } else {

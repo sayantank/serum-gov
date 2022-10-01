@@ -1,12 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-#[cfg(not(feature = "test-bpf"))]
-use crate::config::mints::SRM;
-use crate::{
-    config::parameters::CLAIM_DELAY,
-    state::{ClaimTicket, LockedAccount, User},
-};
+use crate::state::{ClaimTicket, Config, LockedAccount, User};
 
 #[derive(Accounts)]
 pub struct DepositLockedSRM<'info> {
@@ -15,6 +10,12 @@ pub struct DepositLockedSRM<'info> {
 
     /// CHECK: Owner account for which the vest is being created.
     pub owner: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"config"],
+        bump
+    )]
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         mut,
@@ -41,9 +42,8 @@ pub struct DepositLockedSRM<'info> {
     )]
     pub claim_ticket: Account<'info, ClaimTicket>,
 
-    #[cfg_attr(
-        not(feature = "test-bpf"),
-        account(address = SRM),
+    #[account(
+        address = config.srm_mint,
     )]
     pub srm_mint: Account<'info, Mint>,
 
@@ -110,7 +110,7 @@ pub fn handler(ctx: Context<DepositLockedSRM>, amount: u64) -> Result<()> {
     claim_ticket.deposit_account = locked_account.key();
     claim_ticket.bump = *ctx.bumps.get("claim_ticket").unwrap();
     claim_ticket.created_at = ctx.accounts.clock.unix_timestamp;
-    claim_ticket.claim_delay = CLAIM_DELAY;
+    claim_ticket.claim_delay = ctx.accounts.config.claim_delay;
     claim_ticket.gsrm_amount = amount;
 
     user_account.lock_index = user_account.lock_index.checked_add(1).unwrap();

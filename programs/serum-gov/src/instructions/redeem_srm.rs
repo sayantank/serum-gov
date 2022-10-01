@@ -1,10 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-#[cfg(not(feature = "test-bpf"))]
-use crate::config::mints::SRM;
 use crate::errors::*;
-use crate::state::RedeemTicket;
+use crate::state::{Config, RedeemTicket};
 
 #[derive(Accounts)]
 pub struct RedeemSRM<'info> {
@@ -19,6 +17,12 @@ pub struct RedeemSRM<'info> {
     pub authority: AccountInfo<'info>,
 
     #[account(
+        seeds = [b"config"],
+        bump
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
         mut,
         seeds = [b"redeem_ticket", &redeem_ticket.deposit_account.to_bytes()[..], redeem_ticket.redeem_index.to_le_bytes().as_ref()],
         bump,
@@ -30,10 +34,7 @@ pub struct RedeemSRM<'info> {
     )]
     pub redeem_ticket: Account<'info, RedeemTicket>,
 
-    #[cfg_attr(
-        not(feature = "test-bpf"),
-        account(address = SRM),
-    )]
+    #[account(address = config.srm_mint)]
     pub srm_mint: Account<'info, Mint>,
 
     #[account(

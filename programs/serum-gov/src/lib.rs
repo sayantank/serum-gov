@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("3Xqru7FkP2BACJgxtPTP34HpbQkSkgjFPViuwTv98Lg3");
+declare_id!("RE3xgnnxDjhXoPMqEzeKLj8ThrdXwdDa168GCEGoY6Y");
 
 pub mod config;
 pub mod errors;
@@ -16,8 +16,47 @@ pub mod serum_gov {
 
     use super::*;
 
-    pub fn init(ctx: Context<Init>, name: String, symbol: String) -> Result<()> {
-        init::handler(ctx, name, symbol)
+    pub fn init(
+        ctx: Context<Init>,
+        name: String,
+        symbol: String,
+        claim_delay: i64,
+        redeem_delay: i64,
+        cliff_period: i64,
+        linear_vesting_period: i64,
+    ) -> Result<()> {
+        init::handler(
+            ctx,
+            name,
+            symbol,
+            claim_delay,
+            redeem_delay,
+            cliff_period,
+            linear_vesting_period,
+        )
+    }
+
+    pub fn update_config_authority(
+        ctx: Context<UpdateConfigAuthority>,
+        new_config_authority: Pubkey,
+    ) -> Result<()> {
+        update_config_authority::handler(ctx, new_config_authority)
+    }
+
+    pub fn update_config_params(
+        ctx: Context<UpdateConfigParams>,
+        claim_delay: i64,
+        redeem_delay: i64,
+        cliff_period: i64,
+        linear_vesting_period: i64,
+    ) -> Result<()> {
+        update_config_params::handler(
+            ctx,
+            claim_delay,
+            redeem_delay,
+            cliff_period,
+            linear_vesting_period,
+        )
     }
 
     pub fn init_user(ctx: Context<InitUser>, owner: Pubkey) -> Result<()> {

@@ -9,6 +9,8 @@ pub mod init;
 pub mod init_user;
 pub mod redeem_msrm;
 pub mod redeem_srm;
+pub mod update_config_authority;
+pub mod update_config_params;
 
 pub use burn_locked_gsrm::*;
 pub use burn_vest_gsrm::*;
@@ -21,3 +23,5 @@ pub use init::*;
 pub use init_user::*;
 pub use redeem_msrm::*;
 pub use redeem_srm::*;
+pub use update_config_authority::*;
+pub use update_config_params::*;

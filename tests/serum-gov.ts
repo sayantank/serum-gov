@@ -60,6 +60,10 @@ describe("serum-gov", () => {
     [Buffer.from("authority")],
     program.programId
   );
+  const [config] = findProgramAddressSync(
+    [Buffer.from("config")],
+    program.programId
+  );
   const [GSRM_MINT] = findProgramAddressSync(
     [Buffer.from("gSRM")],
     program.programId
@@ -197,10 +201,18 @@ describe("serum-gov", () => {
 
   it("can init", async () => {
     await program.methods
-      .init("Serum Governance", "gSRM")
+      .init(
+        "Serum Governance",
+        "gSRM",
+        new BN(2),
+        new BN(2),
+        new BN(10),
+        new BN(1000)
+      )
       .accounts({
         payer: sbf.publicKey,
         authority,
+        config,
         gsrmMint: GSRM_MINT,
         gsrmMetadata,
         srmMint: SRM_MINT,
@@ -225,6 +237,15 @@ describe("serum-gov", () => {
     const vaultMsrm = await connection.getTokenAccountBalance(msrmVault);
     expect(vaultMsrm.value.uiAmount).to.equal(0);
 
+    const configAccount = await program.account.config.fetch(config);
+    expect(configAccount.configAuthority.toBase58()).to.equal(
+      sbf.publicKey.toBase58()
+    );
+    expect(configAccount.claimDelay.toNumber()).to.equal(2);
+    expect(configAccount.redeemDelay.toNumber()).to.equal(2);
+    expect(configAccount.cliffPeriod.toNumber()).to.equal(10);
+    expect(configAccount.linearVestingPeriod.toNumber()).to.equal(1000);
+
     const gsrmMetaplex = await metaplex
       .nfts()
       .findByMint({ mintAddress: GSRM_MINT })
@@ -242,13 +263,54 @@ describe("serum-gov", () => {
     );
   });
 
+  it("can update config authority", async () => {
+    await program.methods
+      .updateConfigAuthority(alice.publicKey)
+      .accounts({
+        config,
+        configAuthority: sbf.publicKey,
+      })
+      .signers([sbf])
+      .rpc();
+
+    const configAccount = await program.account.config.fetch(config);
+    expect(configAccount.configAuthority.toBase58()).to.equal(
+      alice.publicKey.toBase58()
+    );
+  });
+
+  it("can update config params", async () => {
+    await program.methods
+      .updateConfigParams(new BN(2), new BN(2), new BN(12), new BN(500))
+      .accounts({
+        config,
+        configAuthority: alice.publicKey,
+      })
+      .signers([alice])
+      .rpc();
+
+    const configAccount = await program.account.config.fetch(config);
+    expect(configAccount.claimDelay.toNumber()).to.equal(2);
+    expect(configAccount.redeemDelay.toNumber()).to.equal(2);
+    expect(configAccount.cliffPeriod.toNumber()).to.equal(12);
+    expect(configAccount.linearVestingPeriod.toNumber()).to.equal(500);
+  });
+
   it("cant init twice", async () => {
     try {
       await program.methods
-        .init("Serum Governance", "gSRM")
+        .init(
+          "Serum Governance",
+          "gSRM",
+          new BN(2),
+          new BN(2),
+          new BN(10),
+          new BN(1000)
+        )
         .accounts({
           payer: sbf.publicKey,
           authority,
+          config,
           gsrmMint: GSRM_MINT,
           gsrmMetadata,
           srmMint: SRM_MINT,
@@ -311,6 +373,7 @@ describe("serum-gov", () => {
         srmMint: SRM_MINT,
         payerSrmAccount: sbfSrmAccount,
         authority,
+        config,
         srmVault,
         lockedAccount: aliceLockedAccount,
         claimTicket: claimTicket,
@@ -359,6 +422,7 @@ describe("serum-gov", () => {
         msrmMint: MSRM_MINT,
         payerMsrmAccount: aliceMSRMAccount.publicKey,
         authority,
+        config,
         msrmVault,
         lockedAccount: aliceLockedAccount,
         claimTicket: claimTicket,
@@ -458,6 +522,7 @@ describe("serum-gov", () => {
       .accounts({
         owner: alice.publicKey,
         authority,
+        config,
         gsrmMint: GSRM_MINT,
         ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
@@ -513,6 +578,7 @@ describe("serum-gov", () => {
         .accounts({
           owner: alice.publicKey,
           authority,
+          config,
           gsrmMint: GSRM_MINT,
           ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
@@ -556,6 +622,7 @@ describe("serum-gov", () => {
         .accounts({
           owner: alice.publicKey,
           authority,
+          config,
           gsrmMint: GSRM_MINT,
           ownerGsrmAccount: aliceGSRMAccount.publicKey,
           lockedAccount: aliceLockedAccount,
@@ -598,6 +665,7 @@ describe("serum-gov", () => {
       .accounts({
         owner: alice.publicKey,
         authority,
+        config,
         gsrmMint: GSRM_MINT,
         ownerGsrmAccount: aliceGSRMAccount.publicKey,
         lockedAccount: aliceLockedAccount,
@@ -653,6 +721,7 @@ describe("serum-gov", () => {
       .accounts({
         owner: alice.publicKey,
         authority,
+        config,
         redeemTicket: redeemTicket.publicKey,
         srmMint: SRM_MINT,
         srmVault,
@@ -698,6 +767,7 @@ describe("serum-gov", () => {
       .accounts({
         owner: alice.publicKey,
         authority,
+        config,
         redeemTicket: redeemTicket.publicKey,
         msrmMint: MSRM_MINT,
         msrmVault,
@@ -754,6 +824,7 @@ describe("serum-gov", () => {
         srmMint: SRM_MINT,
         payerSrmAccount: aliceSRMAccount.publicKey,
         authority,
+        config,
         srmVault,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -806,6 +877,7 @@ describe("serum-gov", () => {
         msrmMint: MSRM_MINT,
         payerMsrmAccount: sbfMsrmAccount,
         authority,
+        config,
         msrmVault,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,

@@ -1,6 +1,21 @@
 use anchor_lang::prelude::*;
 
 #[account]
+pub struct Config {
+    pub config_authority: Pubkey,
+    pub srm_mint: Pubkey,
+    pub msrm_mint: Pubkey,
+    pub claim_delay: i64,
+    pub redeem_delay: i64,
+    pub cliff_period: i64,
+    pub linear_vesting_period: i64,
+}
+
+impl Config {
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 8;
+}
+
+#[account]
 pub struct User {
     pub owner: Pubkey,
     pub bump: u8,

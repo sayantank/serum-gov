@@ -5,6 +5,7 @@ use solana_program::program::invoke_signed;
 
 #[cfg(not(feature = "test-bpf"))]
 use crate::config::mints::{MSRM, SRM};
+use crate::state::Config;
 
 #[derive(Accounts)]
 pub struct Init<'info> {
@@ -19,13 +20,22 @@ pub struct Init<'info> {
     )]
     pub authority: AccountInfo<'info>,
 
+    #[account(
+        init,
+        payer = payer,
+        seeds = [b"config"],
+        bump,
+        space = Config::LEN
+    )]
+    pub config: Box<Account<'info, Config>>,
+
     /// NOTE: Decimals have been kept same as SRM.
     #[account(
         init,
         payer = payer,
         seeds = [b"gSRM"],
         bump,
-        mint::decimals = 6,
+        mint::decimals = srm_mint.decimals,
         mint::authority = authority,
     )]
     pub gsrm_mint: Account<'info, Mint>,
@@ -83,8 +93,25 @@ pub struct Init<'info> {
     mpl_token_metadata_program: AccountInfo<'info>,
 }
 
-pub fn handler(ctx: Context<Init>, name: String, symbol: String) -> Result<()> {
+pub fn handler(
+    ctx: Context<Init>,
+    name: String,
+    symbol: String,
+    claim_delay: i64,
+    redeem_delay: i64,
+    cliff_period: i64,
+    linear_vesting_period: i64,
+) -> Result<()> {
     msg!("Initializing Serum Gov");
+
+    let config = &mut ctx.accounts.config;
+    config.config_authority = ctx.accounts.payer.key();
+    config.srm_mint = ctx.accounts.srm_mint.key();
+    config.msrm_mint = ctx.accounts.msrm_mint.key();
+    config.claim_delay = claim_delay;
+    config.redeem_delay = redeem_delay;
+    config.cliff_period = cliff_period;
+    config.linear_vesting_period = linear_vesting_period;
 
     let ix = create_metadata_accounts_v3(
         meta_id(),
