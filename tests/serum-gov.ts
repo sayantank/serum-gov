@@ -279,6 +279,40 @@ describe("serum-gov", () => {
     );
   });
 
+  it("invalid update config authority", async () => {
+    try {
+      await program.methods
+        .updateConfigAuthority(alice.publicKey)
+        .accounts({
+          config,
+          configAuthority: sbf.publicKey,
+        })
+        .signers([sbf])
+        .rpc();
+    } catch (e) {
+      if (e instanceof AnchorError) {
+        assert(true, e.error.errorMessage);
+      } else assert(false);
+    }
+  });
+
+  it("invalid update config params", async () => {
+    try {
+      await program.methods
+        .updateConfigParams(new BN(2), new BN(2), new BN(12), new BN(500))
+        .accounts({
+          config,
+          configAuthority: sbf.publicKey,
+        })
+        .signers([sbf])
+        .rpc();
+    } catch (e) {
+      if (e instanceof AnchorError) {
+        assert(true, e.error.errorMessage);
+      } else assert(false);
+    }
+  });
+
   it("can update config params", async () => {
     await program.methods
       .updateConfigParams(new BN(2), new BN(2), new BN(12), new BN(500))

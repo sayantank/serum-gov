@@ -10,6 +10,7 @@ pub struct UpdateConfigAuthority<'info> {
         mut,
         seeds = [b"config"],
         bump,
+        has_one = config_authority
     )]
     pub config: Account<'info, Config>,
 }
