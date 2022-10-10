@@ -38,11 +38,9 @@ The owner of the VestAccount can then redeem SRM tokens using the claimed gSRM t
 
 These should be used for testing on mainnet-beta and devnet.
 
-- Program ID: `RE3xgnnxDjhXoPMqEzeKLj8ThrdXwdDa168GCEGoY6Y`
-- gSRM: `6XoQibnhohhgGjYmyKiYGZFFdB3CbfbtRitf3s1XwGCJ`
+- Program ID: `EDV6BNBY6pLb4aCJCc5LnELdA9xTywnDZ2m3cWfCbpwZ`
 - SRM: `2xKASju8WCUK6zC54TP4h6WhHdqdcWMNoFpqAdvXvHV6`
 - MSRM: `BoFBTKtdMXC4YALXtNV5tmw1xNWtjxTrR17PvZGmKhmP`
-- Init signature: `2weqcbTiQTmM76PR1x6DUa4xJbNRGe6iKd6fFyRdqKJnXzaDvGvrJPaCZByp6itvJMC9mN25nTTx1fnhT7rJq3qk`
 
 ### Main Instance
 

@@ -204,6 +204,7 @@ describe("serum-gov", () => {
       .init(
         "Serum Governance",
         "gSRM",
+        sbf.publicKey,
         new BN(2),
         new BN(2),
         new BN(10),
@@ -336,6 +337,7 @@ describe("serum-gov", () => {
         .init(
           "Serum Governance",
           "gSRM",
+          sbf.publicKey,
           new BN(2),
           new BN(2),
           new BN(10),

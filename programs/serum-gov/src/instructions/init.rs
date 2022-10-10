@@ -97,15 +97,25 @@ pub fn handler(
     ctx: Context<Init>,
     name: String,
     symbol: String,
+    config_authority: Pubkey,
     claim_delay: i64,
     redeem_delay: i64,
     cliff_period: i64,
     linear_vesting_period: i64,
 ) -> Result<()> {
     msg!("Initializing Serum Gov");
+    msg!(
+        "Config params: {:?}",
+        (
+            claim_delay,
+            redeem_delay,
+            cliff_period,
+            linear_vesting_period
+        )
+    );
 
     let config = &mut ctx.accounts.config;
-    config.config_authority = ctx.accounts.payer.key();
+    config.config_authority = config_authority;
     config.srm_mint = ctx.accounts.srm_mint.key();
     config.msrm_mint = ctx.accounts.msrm_mint.key();
     config.claim_delay = claim_delay;

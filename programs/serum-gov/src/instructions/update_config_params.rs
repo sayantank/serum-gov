@@ -22,6 +22,16 @@ pub fn handler(
     cliff_period: i64,
     linear_vesting_period: i64,
 ) -> Result<()> {
+    msg!(
+        "Updated config params: {:?}",
+        (
+            claim_delay,
+            redeem_delay,
+            cliff_period,
+            linear_vesting_period
+        )
+    );
+
     let config = &mut ctx.accounts.config;
     config.claim_delay = claim_delay;
     config.redeem_delay = redeem_delay;

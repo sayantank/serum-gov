@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("RE3xgnnxDjhXoPMqEzeKLj8ThrdXwdDa168GCEGoY6Y");
+declare_id!("EDV6BNBY6pLb4aCJCc5LnELdA9xTywnDZ2m3cWfCbpwZ");
 
 pub mod config;
 pub mod errors;
@@ -20,6 +20,7 @@ pub mod serum_gov {
         ctx: Context<Init>,
         name: String,
         symbol: String,
+        config_authority: Pubkey,
         claim_delay: i64,
         redeem_delay: i64,
         cliff_period: i64,
@@ -29,6 +30,7 @@ pub mod serum_gov {
             ctx,
             name,
             symbol,
+            config_authority,
             claim_delay,
             redeem_delay,
             cliff_period,

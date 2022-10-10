@@ -16,6 +16,8 @@ pub struct UpdateConfigAuthority<'info> {
 }
 
 pub fn handler(ctx: Context<UpdateConfigAuthority>, new_config_authority: Pubkey) -> Result<()> {
+    msg!("Updated config authority: {:?}", new_config_authority);
+
     let config = &mut ctx.accounts.config;
     config.config_authority = new_config_authority;
     Ok(())
