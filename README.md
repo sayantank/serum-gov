@@ -4,6 +4,8 @@ This program allows locking and vesting of SRM/MSRM tokens to receive **gSRM** t
 
 ## How it works?
 
+### Prerequisites
+
 Users will need to initialize a `User` account for themselves using the `init_user` instruction before they can execute further instructions from the program.
 
 ### Locking SRM/MSRM 🔒
@@ -34,26 +36,28 @@ The owner of the VestAccount can then redeem SRM tokens using the claimed gSRM t
 
 ## Addresses:
 
-### Test Instance
+### Main `serum_gov` Instance
+
+- Program ID: [`FBcTbv5rLy7MQkkAU2uDzAEjjZDeu2BVLVRJGxyz6hnV`](https://explorer.solana.com/address/FBcTbv5rLy7MQkkAU2uDzAEjjZDeu2BVLVRJGxyz6hnV)
+- Init Signature: [`21K6657LRHDnuwDnP53ncM1UKBVhViVvmtyxUxNwGyomph4hUA6piumgrroUmoBUGeDnR9nhP83QV6CiT5prVp8C`](https://explorer.solana.com/tx/21K6657LRHDnuwDnP53ncM1UKBVhViVvmtyxUxNwGyomph4hUA6piumgrroUmoBUGeDnR9nhP83QV6CiT5prVp8C)
+- gSRM Mint: [`G6DyPo5NjpW5kAvZwvM7hx1KeTUgGmuykPMdKuwWRvER`](https://explorer.solana.com/address/G6DyPo5NjpW5kAvZwvM7hx1KeTUgGmuykPMdKuwWRvER)
+
+### Test `serum_gov` Instance
 
 These should be used for testing on mainnet-beta and devnet.
 
-- Program ID: `EDV6BNBY6pLb4aCJCc5LnELdA9xTywnDZ2m3cWfCbpwZ`
-- SRM: `2xKASju8WCUK6zC54TP4h6WhHdqdcWMNoFpqAdvXvHV6`
-- MSRM: `BoFBTKtdMXC4YALXtNV5tmw1xNWtjxTrR17PvZGmKhmP`
+- Program ID: [`EDV6BNBY6pLb4aCJCc5LnELdA9xTywnDZ2m3cWfCbpwZ`](https://explorer.solana.com/address/EDV6BNBY6pLb4aCJCc5LnELdA9xTywnDZ2m3cWfCbpwZ)
+- SRM: [`2xKASju8WCUK6zC54TP4h6WhHdqdcWMNoFpqAdvXvHV6`](https://explorer.solana.com/address/2xKASju8WCUK6zC54TP4h6WhHdqdcWMNoFpqAdvXvHV6)
+- MSRM: [`BoFBTKtdMXC4YALXtNV5tmw1xNWtjxTrR17PvZGmKhmP`](https://explorer.solana.com/address/BoFBTKtdMXC4YALXtNV5tmw1xNWtjxTrR17PvZGmKhmP)
 
-### Main Instance
+### Realms
 
-- Program ID:
-- gSRM:
-- SRM:
-- MSRM:
-- Init Signature:
+#### SPL Governance: [`G41fmJzd29v7Qmdi8ZyTBBYa98ghh3cwHBTexqCG1PQJ`](https://explorer.solana.com/address/G41fmJzd29v7Qmdi8ZyTBBYa98ghh3cwHBTexqCG1PQJ)
 
-- Test Realm: `DzGbJkmu2eFQdnqCjhkV3sC7GLAG9Kdm4SoP485Kbzcp`
+- Mainnet Realm: [`G3FBDbsRiJjcjYuazrH6mRShFMjr9RQn4SxVVxocJavA`](https://explorer.solana.com/address/G3FBDbsRiJjcjYuazrH6mRShFMjr9RQn4SxVVxocJavA)
+- Council Token: [`GwNuCfsN5bEdtQyghvyqEU8BMornrpnGiGv8tBjTPj3Q`](https://explorer.solana.com/address/GwNuCfsN5bEdtQyghvyqEU8BMornrpnGiGv8tBjTPj3Q)
 
-- REALM_1: `C2E8coHoNGEb1veDmWAH14xdKfzdf3BenMnKSfucUAy1`
-- DAO_1_MINT: `23Shpjj1q7vsn6P2JxmB1h8SdHJpLDqDMHaR4DUtuqMW`
+---
 
-- REALM_2: `G1ZnwPJGnRt35nadw33df7hxKHkVu13juMjuE4Pp5FWN`
-- DAO_2_MINT: `HRYLSoqWi646zoqqaxrBsYp1wp7qMmW8ix49wMMyKjEf`
+- Devnet Realm: [`439YMWzq623G6EMowVjTFcHnn4y13tBa876NKdzvjcEr`](https://explorer.solana.com/address/439YMWzq623G6EMowVjTFcHnn4y13tBa876NKdzvjcEr)
+- Mainnet **TEST** Realm: [`3pFLtCJzoewv9aB4JZDhGdRb4xQeJRtVpd66QgpNTDwP`](https://explorer.solana.com/address/3pFLtCJzoewv9aB4JZDhGdRb4xQeJRtVpd66QgpNTDwP)
